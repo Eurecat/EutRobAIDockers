@@ -46,23 +46,39 @@ set -e
 
 
 # Check if --clean-rebuild is among the arguments
+BASE_IMAGE="osrf/ros:jazzy-desktop-full"
 REBUILD=false
 for arg in "$@"; do
     if [ "$arg" == "--clean-rebuild" ]; then
         REBUILD=true
+    fi
+    if [ "$arg" == "--vulcanexus" ]; then
+        BASE_IMAGE="eprosima/vulcanexus:jazzy-desktop"
     fi
 done
 
 if $REBUILD; then # remove all files just in case some modifications have been made and git pull does not work
     echo "Rebuilding: cleaning up dependencies..."
 fi
-
 # vcs import ${BT_DEPS_DIR} < deps.repos
 # vcs pull ${BT_DEPS_DIR}
 
+# Set image name based on the base image choice
+if [[ "${BASE_IMAGE}" == *"vulcanexus"* ]]; then
+    IMAGE_NAME="eut_ros_vulcanexus_torch:jazzy"
+    echo "Building with Vulcanexus Jazzy base image..."
+else
+    IMAGE_NAME="eut_ros_jazzy_torch:latest"
+    echo "Building with standard ROS2 Jazzy base image..."
+fi
+
+echo "Base image: ${BASE_IMAGE}"
+echo "Output image: ${IMAGE_NAME}"
+
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
-    docker build --ssh default --no-cache . -t eut_ros_vulcanexus_torch:jazzy -f Dockerfile.VulcanexusTorch
+    docker build --ssh default --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
 else
-    docker build --ssh default . -t eut_ros_vulcanexus_torch:jazzy -f Dockerfile.VulcanexusTorch
+    docker build --ssh default . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
 fi
+

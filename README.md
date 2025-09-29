@@ -1,25 +1,25 @@
 # EutRobAI Docker Base Images
 
-This repository provides **multiple base Docker images** for robotics and AI development, offering minimal and reproducible Docker setups for various robotics middleware configurations with **PyTorch** support.
+This repository provides a **configurable Docker base image** for robotics and AI development, offering minimal and reproducible Docker setup with **PyTorch** support and choice between different ROS 2 distributions.
 
-The purpose is to serve as a collection of **base containers** for different robotics and AI projects, ensuring consistency and portability across environments and enabling teams to choose the most appropriate base for their specific needs.
+The purpose is to serve as a **flexible base container** for robotics and AI projects, ensuring consistency and portability across environments while allowing teams to choose between standard ROS 2 or Vulcanexus distributions.
 
 ---
 
-## 📦 Available Base Images
+## 📦 Configurable Base Image Options
 
-### 1. **ROS 2 Vulcanexus (Jazzy) + PyTorch**
-- **ROS 2 Vulcanexus (Jazzy)** as the robotics middleware
+### **Standard ROS 2 Jazzy + PyTorch** (Default)
+- Standard **ROS 2 Jazzy Desktop Full** distribution  
 - **PyTorch** for deep learning models
+- General-purpose robotics development with AI capabilities
+
+### **ROS 2 Vulcanexus (Jazzy) + PyTorch** (with `--vulcanexus` flag)
+- **ROS 2 Vulcanexus (Jazzy)** as the robotics middleware
+- **PyTorch** for deep learning models  
 - Optimized for multimodal perception pipelines:
   - **Sound perception** (VAD, ASR)
   - **Visual perception** (entity/person detection, skeletons, posture, gestures, faces, gaze)
   - **Multimodal knowledge integration** (person manager, identity tracking)
-
-### 2. **ROS 2 Jazzy + PyTorch**
-- Standard **ROS 2 Jazzy Desktop** distribution
-- **PyTorch** for deep learning models
-- General-purpose robotics development with AI capabilities
 
 
 <p align="center">
@@ -32,55 +32,52 @@ The purpose is to serve as a collection of **base containers** for different rob
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/Eurecat/EutRobAiDockers
-cd EutRobAiDockers/docker
+git clone https://github.com/Eurecat/EutRobAIDockers
+cd EutRobAIDockers/docker
 ```
 
-### 2. Choose and build your desired base image
+### 2. Build your desired base image
+
+#### For Standard ROS 2 Jazzy + PyTorch (default):
+```bash
+./build.sh
+```
+This produces the image: **eut_ros_jazzy_torch:latest**
 
 #### For ROS 2 Vulcanexus (Jazzy) + PyTorch:
 ```bash
-./build_vulcanexus_torch.sh
+./build.sh --vulcanexus
 ```
 This produces the image: **eut_ros_vulcanexus_torch:jazzy**
 
-#### For ROS 2 Jazzy + PyTorch:
-```bash
-./build_ros2_jazzy.sh
-```
-This produces the image: **eut_ros2_jazzy:latest**
-
 ### 3. Optional: Force a clean rebuild
 
-For any image, add the `--clean-rebuild` flag:
+Add the `--clean-rebuild` flag to any build command:
 ```bash
-./build_vulcanexus_torch.sh --clean-rebuild
+./build.sh --clean-rebuild
 # or
-./build_ros2_jazzy.sh --clean-rebuild
+./build.sh --vulcanexus --clean-rebuild
 ```
 
 ## 🏗️ Repository Structure
 
 ```
-EutRobAiDockers/
+EutRobAIDockers/
 ├── docker/
-│   ├── Dockerfile.VulcanexusTorch     # Vulcanexus Jazzy + PyTorch
-│   ├── build_vulcanexus_torch.sh      # Build script for Vulcanexus
-│   ├── Dockerfile.ROS2Jazzy           # Standard ROS2 Jazzy + PyTorch  
-│   ├── build_ros2_jazzy.sh            # Build script for ROS2 Jazzy
-│   └── [future Dockerfiles...]        # Additional base images
+│   ├── Dockerfile              # Configurable base image
+│   └── build.sh                # Build script with --vulcanexus flag
 ├── README.md
 └── LICENSE
 ```
 
-## 🔧 Adding New Base Images
+## 🔧 Build Configuration
 
-To add a new base image configuration:
+The single `Dockerfile` uses build arguments to configure the base image:
 
-1. Create a new `Dockerfile.<YourImageName>` in the `docker/` folder
-2. Create a corresponding `build_<your_image_name>.sh` script
-3. Update this README with the new option
-4. Ensure the build script references the correct Dockerfile with the `-f` flag
+- **Default**: `osrf/ros:jazzy-desktop-full` (Standard ROS 2 Jazzy)
+- **With `--vulcanexus`**: `eprosima/vulcanexus:jazzy-desktop` (Vulcanexus Jazzy)
+
+The build script automatically selects the appropriate image name based on the chosen base.
 
 ## 🔗 Related Projects
 
