@@ -1,3 +1,13 @@
+# EutRobAI Base Image: Vulcanexus Jazzy + PyTorch
+# 
+# This Dockerfile creates a base image with:
+# - ROS 2 Vulcanexus (Jazzy) as the robotics middleware
+# - PyTorch for deep learning capabilities
+# - Development tools and utilities for robotics AI projects
+#
+# Usage: docker build -f Dockerfile.VulcanexusTorch -t eut_ros_vulcanexus_torch:jazzy .
+# Or use: ./build_vulcanexus_torch.sh
+
 FROM eprosima/vulcanexus:jazzy-desktop
 
 # Set default user/group variables

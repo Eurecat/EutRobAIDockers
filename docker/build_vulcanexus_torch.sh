@@ -62,7 +62,7 @@ fi
 
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
-    docker build --ssh default --no-cache . -t eut_ros_vulcanexus_torch:jazzy -f Dockerfile
+    docker build --ssh default --no-cache . -t eut_ros_vulcanexus_torch:jazzy -f Dockerfile.VulcanexusTorch
 else
-    docker build --ssh default . -t eut_ros_vulcanexus_torch:jazzy -f Dockerfile
+    docker build --ssh default . -t eut_ros_vulcanexus_torch:jazzy -f Dockerfile.VulcanexusTorch
 fi
