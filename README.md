@@ -32,7 +32,7 @@ The purpose is to serve as a **flexible base container** for robotics and AI pro
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/Eurecat/EutRobAIDockers
+git clone git@github.com:Eurecat/EutRobAIDockers.git
 cd EutRobAIDockers/Docker
 ```
 

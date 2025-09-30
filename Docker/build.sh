@@ -66,7 +66,7 @@ if [[ "${BASE_IMAGE}" == *"vulcanexus"* ]]; then
     IMAGE_NAME="eut_ros_vulcanexus_torch:jazzy"
     echo "Building with Vulcanexus Jazzy base image..."
 else
-    IMAGE_NAME="eut_ros_jazzy_torch:latest"
+    IMAGE_NAME="eut_ros_torch:jazzy"
     echo "Building with standard ROS2 Jazzy base image..."
 fi
 
