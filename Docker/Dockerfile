@@ -104,18 +104,6 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash; colcon build --event
 # # Install gosu for privilege dropping
 # RUN apt-get update && apt-get install -y gosu
 
-# # Set default user/group variables for build time
-# ARG USER_ID=1000
-# ARG GROUP_ID=1000
-# ENV USER_ID=${USER_ID}
-# ENV GROUP_ID=${GROUP_ID}
-
-
-# Install additional RMW
-# RUN apt update && apt install -y \
-# ros-${ROS_DISTRO}-rmw-cyclonedds-cpp ros-${ROS_DISTRO}-rmw-zenoh-cpp \
-# && rm -rf /var/lib/apt/lists/*
-
 # ####################################################################################################
 # User created during build - switch to non-root user
 # ####################################################################################################

@@ -60,8 +60,6 @@ done
 if $REBUILD; then # remove all files just in case some modifications have been made and git pull does not work
     echo "Rebuilding: cleaning up dependencies..."
 fi
-# vcs import ${BT_DEPS_DIR} < deps.repos
-# vcs pull ${BT_DEPS_DIR}
 
 # Set image name based on the base image choice
 if [[ "${BASE_IMAGE}" == *"vulcanexus"* ]]; then

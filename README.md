@@ -33,7 +33,7 @@ The purpose is to serve as a **flexible base container** for robotics and AI pro
 ### 1. Clone the repository
 ```bash
 git clone https://github.com/Eurecat/EutRobAIDockers
-cd EutRobAIDockers/docker
+cd EutRobAIDockers/Docker
 ```
 
 ### 2. Build your desired base image
@@ -63,7 +63,7 @@ Add the `--clean-rebuild` flag to any build command:
 
 ```
 EutRobAIDockers/
-├── docker/
+├── Docker/
 │   ├── Dockerfile              # Configurable base image
 │   └── build.sh                # Build script with --vulcanexus flag
 ├── README.md
@@ -78,9 +78,4 @@ The single `Dockerfile` uses build arguments to configure the base image:
 - **With `--vulcanexus`**: `eprosima/vulcanexus:jazzy-desktop` (Vulcanexus Jazzy)
 
 The build script automatically selects the appropriate image name based on the chosen base.
-
-## 🔗 Related Projects
-
-- [🔗 Cognitive Robotics Brainstorming](https://eurecatcloud.sharepoint.com/sites/robotics/Shared%20Documents/10%20Cognitive%20Robotics/Brainstorming)
-- [EutEntityDetection](https://github.com/Eurecat/EutEntityDetection) - Example project using these base images
 
