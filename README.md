@@ -40,13 +40,13 @@ cd EutRobAIDockers/Docker
 
 #### For Standard ROS 2 Jazzy + PyTorch (default):
 ```bash
-./build.sh
+./build_container.sh
 ```
 This produces the image: **eut_ros_jazzy_torch:latest**
 
 #### For ROS 2 Vulcanexus (Jazzy) + PyTorch:
 ```bash
-./build.sh --vulcanexus
+./build_container.sh --vulcanexus
 ```
 This produces the image: **eut_ros_vulcanexus_torch:jazzy**
 
@@ -54,20 +54,9 @@ This produces the image: **eut_ros_vulcanexus_torch:jazzy**
 
 Add the `--clean-rebuild` flag to any build command:
 ```bash
-./build.sh --clean-rebuild
+./build_container.sh --clean-rebuild
 # or
-./build.sh --vulcanexus --clean-rebuild
-```
-
-## 🏗️ Repository Structure
-
-```
-EutRobAIDockers/
-├── Docker/
-│   ├── Dockerfile              # Configurable base image
-│   └── build.sh                # Build script with --vulcanexus flag
-├── README.md
-└── LICENSE
+./build_container.sh --vulcanexus --clean-rebuild
 ```
 
 ## 🔧 Build Configuration
@@ -78,4 +67,33 @@ The single `Dockerfile` uses build arguments to configure the base image:
 - **With `--vulcanexus`**: `eprosima/vulcanexus:jazzy-desktop` (Vulcanexus Jazzy)
 
 The build script automatically selects the appropriate image name based on the chosen base.
+
+## Launch
+
+### Option A: Deployment
+
+As simple as...
+   ```bash
+   docker compose up
+   ```
+... within `Docker/` folder
+
+Will start camera publisher and (simple) rgb perception annotation on `/entities/detected` topic.
+
+If you want to avoid to start automatically the camera just "scale down" to zero the respective service:
+
+   ```bash
+   docker compose up --scale eut_vision_camera=0
+   ```
+
+### Option B: DevContainer (Development)
+
+Within VS Code editor, make sure you have installed extension DevContainer, press `ctrl+shit+P` (command option) and search for "_Dev Containers: Open Folder in Container..._". From there you can select the folder Docker/DevContainer and the stack will launch in development mode (no node will be automatically started).
+
+### Notes
+Please note that launching the stack might involve launch of GUI application from docker, therefore make sure in the current active session in the host you have given at least once the following command to make sure permissions are given.
+
+```bash
+xhost +local:docker
+```
 

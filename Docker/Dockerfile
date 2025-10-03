@@ -4,11 +4,6 @@
 # - Configurable ROS 2 base (standard Jazzy or Vulcanexus Jazzy)
 # - PyTorch for deep learning capabilities
 # - Development tools and utilities for robotics AI projects
-#
-# Usage: 
-# - Standard ROS2 Jazzy: ./build.sh
-# - Vulcanexus Jazzy: ./build.sh --vulcanexus
-# - Clean rebuild: ./build.sh --clean-rebuild [--vulcanexus]
 
 # Choose the base image at build time. Defaults to the second option.
 ARG BASE_IMAGE="osrf/ros:jazzy-desktop-full"
@@ -35,37 +30,34 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-dev \
+    python3-venv \
     build-essential \
+    python3-rosdep \
+    python3-colcon-common-extensions \
+    python3-vcstool \
+    git \
+    terminator \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (fast Python package installer) via pip with system packages override
 RUN pip3 install --break-system-packages uv
 
-# Install PyTorch and torchvision using uv with system packages override
-RUN uv pip install --system --no-cache --break-system-packages \
-    "torch>=1.7.0" \
-    "torchvision>=0.8.1"
+# # Install PyTorch and torchvision using uv with system packages override
+# Create a virtual environment for Python packages
+RUN python3 -m venv /opt/ros_python_env
+
+# Install requirements in the virtual environment
+COPY requirements.txt /tmp/requirements.txt
+RUN /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements.txt"
 
 # ####################################################################################################
-# # Binaries (ros2 utilities, etc.)
-# ####################################################################################################
-
-# ####################################################################################################
-# # Binaries (general, utilities, BT/groot/rosxintrospection/... deps etc.)
-# ####################################################################################################
-
-
-# ####################################################################################################
-# # Binaries for ....
+# # Binaries for .... (ros2 utilities, etc.)
 # ####################################################################################################
 
 # ####################################################################################################
-# # Clone private repositories that do not need to be remapped as volumes
+# # Prepare workspace: clone private repositories that do not need to be COPIED from deps nor remapped as volumes
 # ####################################################################################################
-RUN mkdir -p /workspace
-
-RUN echo "Setting up SSH for git access"
-RUN mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+RUN mkdir -p /workspace/src
 
 # Set working directory
 WORKDIR /workspace/src
@@ -91,27 +83,31 @@ RUN apt-get update && \
 # Moving src in the workspace and compiling...
 # ####################################################################################################
 # '
-# Copy all BTs-related folders (for cache efficiency in building, maybe we want to move the COPY operations)
+# Copy all src deps
 # COPY deps/...
 
 WORKDIR /workspace
 RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash; colcon build --event-handlers console_direct+ --symlink-install;"
 
 # ####################################################################################################
-# Setting up local user space (create user, set permissions, etc.) during image build
+# [NOT DONE atm] Setting up local user space (create user, set permissions, etc.) during image build
 # ####################################################################################################
+
+# ...
 
 # # Install gosu for privilege dropping
 # RUN apt-get update && apt-get install -y gosu
 
 # ####################################################################################################
-# User created during build - switch to non-root user
+# [NOT DONE atm] User created during build - switch to non-root user
 # ####################################################################################################
 
-# Copy and run original entrypoint script during build
-# COPY entrypoint.sh /workspace/entrypoint.sh
-# RUN chmod +x /workspace/entrypoint.sh
-# ENTRYPOINT ["/workspace/entrypoint.sh"]
+# Copy and set up the entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
 
 # # USER coghri
 # CMD ["/bin/bash"]
