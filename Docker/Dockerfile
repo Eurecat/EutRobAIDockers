@@ -87,7 +87,7 @@ RUN apt-get update && \
 # COPY deps/...
 
 WORKDIR /workspace
-RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash; colcon build --event-handlers console_direct+ --symlink-install;"
+RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash; colcon build --event-handlers console_direct+ --symlink-install --symlink-install;"
 
 # ####################################################################################################
 # [NOT DONE atm] Setting up local user space (create user, set permissions, etc.) during image build
@@ -109,5 +109,5 @@ RUN chmod +x /entrypoint.sh
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
 
-# # USER coghri
-# CMD ["/bin/bash"]
+# Default command
+CMD ["/bin/bash"]

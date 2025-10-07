@@ -6,7 +6,7 @@
     "workspaceFolder": "/workspace",
     "shutdownAction": "stopCompose",
     "overrideCommand": false,
-    // "postStartCommand": "bash -c \"cd /workspace && source ./install/setup.bash && colcon build --event-handlers console_direct+ --symlink-install; source ./install/setup.bash && /bin/bash\"",
+    // "postStartCommand": "bash -c \"cd /workspace && source ./install/setup.bash && colcon build --event-handlers console_direct+ --symlink-install --symlink-install; source ./install/setup.bash && /bin/bash\"",
     "settings": {
         "terminal.integrated.shell.linux": "/bin/bash",
         "editor.fontSize": 14,
