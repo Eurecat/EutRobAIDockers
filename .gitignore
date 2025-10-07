@@ -208,3 +208,4 @@ __marimo__/
 skeleton_detection/weights
 log/
 install/
+Docker/deps/
