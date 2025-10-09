@@ -44,7 +44,7 @@ RUN pip3 install --break-system-packages uv
 
 # # Install PyTorch and torchvision using uv with system packages override
 # Create a virtual environment for Python packages
-RUN python3 -m venv /opt/ros_python_env
+RUN uv venv /opt/ros_python_env --python 3.12.3
 
 # Install requirements in the virtual environment
 COPY requirements.txt /tmp/requirements.txt
