@@ -36,6 +36,7 @@ RUN apt-get update && apt-get install -y \
     python3-colcon-common-extensions \
     python3-vcstool \
     git \
+    wget \
     terminator \
     && rm -rf /var/lib/apt/lists/*
 
