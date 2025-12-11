@@ -34,11 +34,12 @@ if $REBUILD; then # remove all files just in case some modifications have been m
 fi
 
 # Set image name based on the base image choice
+TARGET_DISTRO="jazzy"
 if [[ "${BASE_IMAGE}" == *"vulcanexus"* ]]; then
-    IMAGE_NAME="eut_ros_vulcanexus_torch:jazzy"
+    IMAGE_NAME="eut_ros_vulcanexus_torch:${TARGET_DISTRO}"
     echo "Building with Vulcanexus Jazzy base image..."
 else
-    IMAGE_NAME="eut_ros_torch:jazzy"
+    IMAGE_NAME="eut_ros_torch:${TARGET_DISTRO}"
     echo "Building with standard ROS2 Jazzy base image..."
 fi
 
@@ -50,6 +51,13 @@ if $REBUILD; then
     docker build --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
 else
     docker build . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
+fi
+
+# Set or Update TARGET_DISTRO 
+if grep -q -E "^TARGET_DISTRO=" "$ENV_FILE"; then
+    sed -i "s/^TARGET_DISTRO=.*/TARGET_DISTRO=$TARGET_DISTRO/" "$ENV_FILE"
+else
+    echo "TARGET_DISTRO=$TARGET_DISTRO" >> "$ENV_FILE"
 fi
 
 # Set or Update BUILT_IMAGE 
