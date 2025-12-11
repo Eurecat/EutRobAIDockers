@@ -47,9 +47,9 @@ echo "Output image: ${IMAGE_NAME}"
 
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
-    docker build --ssh default --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
+    docker build --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
 else
-    docker build --ssh default . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
+    docker build . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
 fi
 
 # Set or Update BUILT_IMAGE 
