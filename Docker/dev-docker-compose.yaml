@@ -15,6 +15,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ~/.xauth_docker/share/:/tmp/xauth/
       - ./.vscode:/workspace/.vscode
+      - ../simple_cpp:/workspace/src/simple_cpp
       - ../simple_py:/workspace/src/simple_py
       - ./dev-entrypoint.sh:/entrypoint.sh:rw # Override entrypoint
 
