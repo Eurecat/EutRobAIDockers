@@ -74,21 +74,29 @@ The build script automatically selects the appropriate image name based on the c
 
 As simple as...
    ```bash
-   docker compose up
+   docker compose up [--force-recreate]
    ```
 ... within `Docker/` folder
 
-Will start camera publisher and (simple) rgb perception annotation on `/entities/detected` topic.
-
-If you want to avoid to start automatically the camera just "scale down" to zero the respective service:
-
-   ```bash
-   docker compose up --scale eut_vision_camera=0
-   ```
+`--force-recreate` option suggested to avoid reusing cached stopped container.
 
 ### Option B: DevContainer (Development)
 
+In this case you need to specify a different docker compose file:
+   ```bash
+   docker compose -f dev-docker-compose.yaml up [--force-recreate]
+   ```
+... within `Docker/` folder
+
+
 Within VS Code editor, make sure you have installed extension DevContainer, press `ctrl+shit+P` (command option) and search for "_Dev Containers: Open Folder in Container..._". From there you can select the folder Docker/DevContainer and the stack will launch in development mode (no node will be automatically started).
+
+## Test
+To run automated tests and see their results
+   ```bash
+colcon test --packages-select simple_py --event-handlers console_direct+ --pytest-args -v
+colcon test-result  --all --verbose
+   ```
 
 ### Notes
 Please note that launching the stack might involve launch of GUI application from docker, therefore make sure in the current active session in the host you have given at least once the following command to make sure permissions are given.

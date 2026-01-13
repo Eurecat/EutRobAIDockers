@@ -53,6 +53,36 @@ jobs:
             exit 1
           fi
 
+      - name: Run tests in container
+        run: |
+          source Docker/.env
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ${BUILT_IMAGE} \
+            bash -c "source /opt/ros/${TARGET_DISTRO}/setup.bash && \
+                     colcon test --packages-select simple_py --event-handlers console_direct+ --pytest-args -v"
+      
+      - name: Display test results
+        if: always()
+        run: |
+          source Docker/.env
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ${BUILT_IMAGE} \
+            bash -c "source /opt/ros/${TARGET_DISTRO}/setup.bash && \
+                     colcon test-result --all --verbose"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            build/*/test_results/**/*.xml
+            log/latest_test/**/*.log
+
       - name: Tag image for Docker Hub
         run: |
           # Get the image name from .env file

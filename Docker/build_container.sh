@@ -17,6 +17,36 @@ if [ ! -f "$ENV_FILE" ]; then
     touch "$ENV_FILE"
 fi
 
+DEFAULT_USERNAME="coghri"
+DEFAULT_ROS_DOMAIN_ID="12"
+CURRENT_USER_ID=$(id -u)
+CURRENT_GROUP_ID=$(id -g)
+
+# Set USERNAME if not present, otherwise leave existing value
+if ! grep -q -E "^USERNAME=" "$ENV_FILE"; then
+    echo "USERNAME=$DEFAULT_USERNAME" >> "$ENV_FILE"
+fi
+
+# Set ROS_DOMAIN_ID if not present, otherwise leave existing value
+if ! grep -q -E "^ROS_DOMAIN_ID=" "$ENV_FILE"; then
+    echo "ROS_DOMAIN_ID=$DEFAULT_ROS_DOMAIN_ID" >> "$ENV_FILE"
+fi
+
+# Set or Update USER_ID with current host user ID
+if grep -q -E "^USER_ID=" "$ENV_FILE"; then
+    sed -i "s/^USER_ID=.*/USER_ID=$CURRENT_USER_ID/" "$ENV_FILE"
+else
+    echo "USER_ID=$CURRENT_USER_ID" >> "$ENV_FILE"
+fi
+
+# Set or Update GROUP_ID with current host group ID
+if grep -q -E "^GROUP_ID=" "$ENV_FILE"; then
+    sed -i "s/^GROUP_ID=.*/GROUP_ID=$CURRENT_GROUP_ID/" "$ENV_FILE"
+else
+    echo "GROUP_ID=$CURRENT_GROUP_ID" >> "$ENV_FILE"
+fi
+# --- END: Manage .env file ---
+
 # Check if --clean-rebuild is among the arguments
 BASE_IMAGE="osrf/ros:jazzy-desktop-full"
 REBUILD=false

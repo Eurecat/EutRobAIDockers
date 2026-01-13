@@ -38,6 +38,8 @@ RUN apt-get update && apt-get install -y \
     git \
     wget \
     terminator \
+    gosu \
+    nano \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (fast Python package installer) via pip with system packages override
