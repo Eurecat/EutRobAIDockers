@@ -1,4 +1,4 @@
-name: Build Docker Image
+name: Build, Test & Push Docker Image
 
 on:
   push:
@@ -66,7 +66,7 @@ jobs:
                      source /opt/ros/${TARGET_DISTRO}/setup.bash && \
                      colcon test \
                        --event-handlers console_direct+ \
-                       --pytest-args -v \
+                       --pytest-args '--junitxml=pytest_results.xml -v' \
                        --return-code-on-test-failure || true"
 
       # Generate human-readable test summary
@@ -96,7 +96,10 @@ jobs:
         if: always()
         with:
           name: ROS 2 Tests
-          path: 'build/*/test_results/**/*.xml'
+          path: |
+            build/*/test_results/**/*.xml
+            build/*/test_results/**/*.gtest.xml
+            build/**/pytest_results.xml
           reporter: java-junit
           fail-on-error: false
       
@@ -108,6 +111,8 @@ jobs:
           name: test-results
           path: |
             build/*/test_results/**/*.xml
+            build/*/test_results/**/*.gtest.xml
+            build/**/pytest_results.xml
             log/latest_test/**/*.log
       
       # Create test badge (for README)
@@ -133,6 +138,7 @@ jobs:
           path: test-badge.json
 
       - name: Tag image for Docker Hub
+        if: github.ref == 'refs/heads/main'
         run: |
           # Get the image name from .env file
           source Docker/.env
@@ -142,6 +148,7 @@ jobs:
           docker tag ${BUILT_IMAGE} ${DOCKERHUB_ORG}/eutrobai:${TARGET_DISTRO}
       
       - name: Push to Docker Hub
+        if: github.ref == 'refs/heads/main'
         run: |
           source Docker/.env
           DOCKERHUB_ORG=${{ secrets.DOCKERHUB_ORG }}
