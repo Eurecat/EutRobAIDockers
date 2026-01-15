@@ -94,7 +94,7 @@ Within VS Code editor, make sure you have installed extension DevContainer, pres
 ## Test
 To run automated tests and see their results
    ```bash
-colcon test --packages-select simple_py --event-handlers console_direct+ --pytest-args -v
+colcon test --event-handlers console_direct+ --pytest-args -v
 colcon test-result  --all --verbose
    ```
 
