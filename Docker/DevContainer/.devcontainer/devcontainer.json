@@ -1,7 +1,7 @@
 {
-    "name": "eut_robai",
+    "name": "dev-eut_robai",
     "dockerComposeFile": "../../dev-docker-compose.yaml",
-    "service": "eut_robai",
+    "service": "dev-eut_robai",
     "remoteUser": "coghri",
     "workspaceFolder": "/workspace",
     "shutdownAction": "stopCompose",

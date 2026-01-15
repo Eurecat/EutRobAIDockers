@@ -1,7 +1,7 @@
 name: coghri_robai
 
 services:
-  eut_robai:
+  dev-eut_robai:
     container_name: "eut_robai"
     network_mode: host 
     ipc: host
