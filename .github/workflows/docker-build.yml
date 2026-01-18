@@ -63,11 +63,24 @@ jobs:
             ${BUILT_IMAGE} \
             bash -c "source /opt/ros/${TARGET_DISTRO}/setup.bash && \
                      colcon build --symlink-install && \
-                     source /opt/ros/${TARGET_DISTRO}/setup.bash && \
                      colcon test \
                        --event-handlers console_direct+ \
-                       --pytest-args '--junitxml=pytest_results.xml -v' \
+                       --pytest-args '-v' \
                        --return-code-on-test-failure || true"
+
+      # 🔍 Debug: List generated test files
+      - name: List test result files
+        if: always()
+        run: |
+          echo "📁 Searching for test result files..."
+          echo "=== XML files found: ==="
+          find ${{ github.workspace }}/build -name "*.xml" -type f || echo "No XML files found"
+          echo ""
+          echo "=== Directory structure: ==="
+          ls -laR ${{ github.workspace }}/build/*/test_results/ 2>/dev/null || echo "Test results directory not found"
+          echo ""
+          echo "=== Build directory: ==="
+          ls -la ${{ github.workspace }}/build/ || echo "Build directory not found"
 
       # Generate human-readable test summary
       - name: Generate test summary
@@ -90,16 +103,13 @@ jobs:
           cat test_summary.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       
-      # Generate Test Report Badge (Option 2)
+      # Generate Test Report Badge
       - name: Generate Test Report
         uses: dorny/test-reporter@v1
         if: always()
         with:
           name: ROS 2 Tests
-          path: |
-            build/*/test_results/**/*.xml
-            build/*/test_results/**/*.gtest.xml
-            build/**/pytest_results.xml
+          path: 'build/*/test_results/**/*.xml'
           reporter: java-junit
           fail-on-error: false
       
@@ -111,9 +121,8 @@ jobs:
           name: test-results
           path: |
             build/*/test_results/**/*.xml
-            build/*/test_results/**/*.gtest.xml
-            build/**/pytest_results.xml
             log/latest_test/**/*.log
+            test_summary.txt
       
       # Create test badge (for README)
       - name: Create test badge
@@ -121,13 +130,26 @@ jobs:
         run: |
           source Docker/.env
           
-          # Count passed/failed tests
-          PASSED=$(grep -r "tests=\"" build/*/test_results/**/*.xml | \
-                   grep -oP 'tests="\K[0-9]+' | awk '{sum+=$1} END {print sum}')
-          FAILED=$(grep -r "failures=\"" build/*/test_results/**/*.xml | \
-                   grep -oP 'failures="\K[0-9]+' | awk '{sum+=$1} END {print sum}')
+          # Count passed/failed tests from all XML files
+          PASSED=0
+          FAILED=0
           
-          # Create badge JSON (can be used with shields.io endpoint badge)
+          # Check if any XML files exist in test_results
+          if find build/*/test_results -name "*.xml" -type f 2>/dev/null | grep -q .; then
+            # Sum up tests from all XML files
+            PASSED=$(find build/*/test_results -name "*.xml" -type f -exec grep -h "tests=" {} \; | \
+                     grep -oP 'tests="\K[0-9]+' | awk '{sum+=$1} END {print sum}')
+            FAILED=$(find build/*/test_results -name "*.xml" -type f -exec grep -h "failures=" {} \; | \
+                     grep -oP 'failures="\K[0-9]+' | awk '{sum+=$1} END {print sum}')
+          fi
+          
+          # Default to 0 if empty
+          PASSED=${PASSED:-0}
+          FAILED=${FAILED:-0}
+          
+          echo "Tests: $PASSED passed, $FAILED failed"
+          
+          # Create badge JSON
           echo "{\"schemaVersion\": 1, \"label\": \"tests\", \"message\": \"$PASSED passed / $FAILED failed\", \"color\": \"$([ $FAILED -eq 0 ] && echo 'success' || echo 'critical')\"}" > test-badge.json
 
       - name: Upload badge data

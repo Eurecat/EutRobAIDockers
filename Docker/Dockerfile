@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-dev \
     python3-venv \
+    python3-pytest python3-pytest-cov \
     build-essential \
     python3-rosdep \
     python3-colcon-common-extensions \
