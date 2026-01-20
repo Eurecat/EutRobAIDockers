@@ -91,12 +91,57 @@ In this case you need to specify a different docker compose file:
 
 Within VS Code editor, make sure you have installed extension DevContainer, press `ctrl+shit+P` (command option) and search for "_Dev Containers: Open Folder in Container..._". From there you can select the folder Docker/DevContainer and the stack will launch in development mode (no node will be automatically started).
 
-## Test
-To run automated tests and see their results
-   ```bash
-colcon test --event-handlers console_direct+ --pytest-args -v
-colcon test-result  --all --verbose
-   ```
+## 🧪 Testing
+
+This repository includes **reference test implementations** in both `simple_cpp` and `simple_py` packages, serving as templates for testing ROS 2 nodes with AI/ML integration.
+
+### Test Structure
+
+Both packages implement a **layered testing approach**:
+
+- **`simple_cpp`**: GoogleTest-based unit + ROS integration tests
+  - Pure C++ algorithm tests (no ROS dependencies)
+  - ROS node tests with domain isolation for parallel execution
+  - Actions, services, and parameter validation
+  - See [simple_cpp/test/README.md](simple_cpp/test/README.md) for comprehensive guide
+
+- **`simple_py`**: pytest-based unit + ROS integration tests
+  - Pure PyTorch logic tests (static methods)
+  - ROS node integration tests using `launch_pytest`
+  - Environment setup for AI venv (PyTorch dependencies)
+  - See [simple_py/test/README.md](simple_py/test/README.md) for details
+
+### Running Tests Locally
+
+Run all tests across both packages:
+```bash
+colcon build --symlink-install
+colcon test --event-handlers console_direct+ --pytest-args '-v'
+colcon test-result --all --verbose
+```
+
+Run tests for a specific package:
+```bash
+colcon test --packages-select simple_cpp --event-handlers console_direct+
+colcon test --packages-select simple_py --pytest-args '-v'
+```
+
+### 🔄 CI/CD Integration
+
+Tests are **automatically executed** on every push and pull request via [GitHub Actions](.github/workflows/docker-build.yml):
+
+1. **Build**: Docker image is built with the configured ROS distribution
+2. **Test**: Both `simple_cpp` and `simple_py` tests run inside the container
+3. **Report**: Test results are collected and published as GitHub Actions artifacts
+4. **Deploy**: On successful tests (main branch), image is pushed to Docker Hub
+
+**Workflow Highlights**:
+- JUnit XML test reports generated for visualization
+- Test badge generation showing pass/fail status
+- Artifacts include test results, logs, and summary
+- Automated Docker Hub deployment with tagged images
+
+See the [workflow file](.github/workflows/docker-build.yml) for implementation details.
 
 ### Notes
 Please note that launching the stack might involve launch of GUI application from docker, therefore make sure in the current active session in the host you have given at least once the following command to make sure permissions are given.
@@ -104,4 +149,8 @@ Please note that launching the stack might involve launch of GUI application fro
 ```bash
 xhost +local:docker
 ```
+
+### Acknowledgements
+For the testing part (especially cpp part), this repository has taken inspiration from this [amazing workshop](https://github.com/Ekumen-OS/ros2_testing_workshop_roscon_es_25/) from ROSCON ES 2025 edition.
+
 
