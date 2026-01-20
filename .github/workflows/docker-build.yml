@@ -62,7 +62,13 @@ jobs:
             -w /workspace \
             ${BUILT_IMAGE} \
             bash -c "source /opt/ros/${TARGET_DISTRO}/setup.bash && \
-                     colcon build --symlink-install && \
+                     colcon build --symlink-install \
+                       --packages-select simple_cpp \
+                       --cmake-args -DCMAKE_CXX_FLAGS='--coverage' \
+                                    -DCMAKE_C_FLAGS='--coverage' \
+                                    -DCMAKE_EXE_LINKER_FLAGS='--coverage' && \
+                     colcon build --symlink-install \
+                       --packages-skip simple_cpp && \
                      colcon test \
                        --event-handlers console_direct+ \
                        --pytest-args '-v' \
@@ -102,6 +108,62 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           cat test_summary.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+      
+      # Generate code coverage reports
+      - name: Generate coverage reports
+        if: always()
+        run: |
+          source Docker/.env
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ${BUILT_IMAGE} \
+            bash -c "/quick_coverage.sh" \
+            > coverage_summary.txt || true
+          
+          # Display in logs
+          cat coverage_summary.txt
+          
+          # Add to GitHub Actions summary
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Code Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat coverage_summary.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      
+      # Generate Coverage Report for PR
+      - name: Code Coverage Report
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        if: always()
+        with:
+          filename: 'build/simple_cpp/coverage_filtered.info,build/simple_py/coverage.lcov'
+          badge: true
+          fail_below_min: false
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: true
+          indicators: true
+          output: both
+          thresholds: '60 80'
+      
+      # Add coverage report to PR comment
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: code-coverage-results.md
+      
+      # Upload coverage reports as artifacts
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            simple_py/htmlcov/**
+            build/simple_cpp/coverage_html/**
+            coverage_summary.txt
       
       # Generate Test Report Badge
       - name: Generate Test Report
@@ -166,6 +228,67 @@ jobs:
         with:
           name: test-badge
           path: test-badge.json
+      
+      # Create coverage badge (for README)
+      - name: Create coverage badge
+        if: always() && github.ref == 'refs/heads/main'
+        run: |
+          # Extract Python coverage percentage from lcov file
+          if [ -f "build/simple_py/coverage.lcov" ]; then
+            PY_LINES_HIT=$(grep -E "^LH:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
+            PY_LINES_FOUND=$(grep -E "^LF:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
+            if [ "$PY_LINES_FOUND" -gt 0 ]; then
+              PY_COV_PCT=$(awk "BEGIN {printf \"%.0f\", ($PY_LINES_HIT/$PY_LINES_FOUND)*100}")
+            else
+              PY_COV_PCT=0
+            fi
+          else
+            PY_COV_PCT=0
+          fi
+          
+          # Extract C++ coverage percentage
+          if [ -f "build/simple_cpp/coverage_filtered.info" ]; then
+            source Docker/.env
+            docker run --rm \
+              -v ${{ github.workspace }}:/workspace \
+              -w /workspace \
+              ${BUILT_IMAGE} \
+              bash -c "lcov --summary build/simple_cpp/coverage_filtered.info 2>&1 | grep -oP 'lines......: \K[0-9.]+' || echo '0'" > cpp_cov.txt
+            CPP_COV_PCT=$(cat cpp_cov.txt | cut -d. -f1)
+          else
+            CPP_COV_PCT=0
+          fi
+          
+          # Calculate average coverage
+          if [ $PY_COV_PCT -gt 0 ] || [ $CPP_COV_PCT -gt 0 ]; then
+            AVG_COV=$(( (PY_COV_PCT + CPP_COV_PCT) / 2 ))
+          else
+            AVG_COV=0
+          fi
+          
+          echo "📊 Coverage stats: Python: ${PY_COV_PCT}%, C++: ${CPP_COV_PCT}%, Average: ${AVG_COV}%"
+          
+          # Determine badge color
+          if [ $AVG_COV -ge 80 ]; then
+            COLOR="brightgreen"
+          elif [ $AVG_COV -ge 60 ]; then
+            COLOR="yellow"
+          elif [ $AVG_COV -ge 40 ]; then
+            COLOR="orange"
+          else
+            COLOR="red"
+          fi
+          
+          # Create badge JSON
+          echo "{\"schemaVersion\": 1, \"label\": \"coverage\", \"message\": \"${AVG_COV}%\", \"color\": \"$COLOR\"}" > coverage-badge.json
+          cat coverage-badge.json
+
+      - name: Upload coverage badge data
+        if: always() && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-badge
+          path: coverage-badge.json
 
       - name: Tag image for Docker Hub
         if: github.ref == 'refs/heads/main'
