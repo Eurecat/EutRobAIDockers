@@ -131,65 +131,38 @@ jobs:
           cat coverage_summary.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       
-      # Generate custom coverage report for PR
-      - name: Generate coverage PR report
+      # Convert lcov to Cobertura XML for better tool compatibility
+      - name: Convert coverage to Cobertura XML
         if: always()
         run: |
-          # Extract Python coverage
-          if [ -f "build/simple_py/coverage.lcov" ]; then
-            PY_LINES_HIT=$(grep -E "^LH:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
-            PY_LINES_FOUND=$(grep -E "^LF:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
-            if [ "$PY_LINES_FOUND" -gt 0 ]; then
-              PY_COV=$(awk "BEGIN {printf \"%.1f\", ($PY_LINES_HIT/$PY_LINES_FOUND)*100}")
-            else
-              PY_COV="0.0"
-            fi
-          else
-            PY_COV="N/A"
-            PY_LINES_HIT=0
-            PY_LINES_FOUND=0
-          fi
+          python3 -m pip install lcov_cobertura
           
-          # Extract C++ coverage
+          # Convert C++ coverage
           if [ -f "build/simple_cpp/coverage_filtered.info" ]; then
-            source Docker/.env
-            docker run --rm \
-              -v ${{ github.workspace }}:/workspace \
-              -w /workspace \
-              ${BUILT_IMAGE} \
-              bash -c "lcov --summary build/simple_cpp/coverage_filtered.info 2>&1 | grep -oP 'lines......: \K[0-9.]+' || echo '0'" > cpp_cov_raw.txt
-            CPP_COV=$(cat cpp_cov_raw.txt)
-            CPP_LINES=$(grep -E "^LF:" build/simple_cpp/coverage_filtered.info | cut -d: -f2 | awk '{s+=$1} END {print s}')
-            CPP_LINES_HIT=$(grep -E "^LH:" build/simple_cpp/coverage_filtered.info | cut -d: -f2 | awk '{s+=$1} END {print s}')
-          else
-            CPP_COV="N/A"
-            CPP_LINES=0
-            CPP_LINES_HIT=0
+            python3 -m lcov_cobertura build/simple_cpp/coverage_filtered.info -o coverage-cpp.xml
+            echo "✅ Converted C++ coverage to XML"
           fi
           
-          # Create markdown report
-          cat > coverage-pr-report.md << 'EOF'
-          ## 📊 Code Coverage Report
-          
-          | Package | Coverage | Lines Hit | Total Lines |
-          |---------|----------|-----------|-------------|
-          | **simple_py** (Python) | $PY_COV% | $PY_LINES_HIT | $PY_LINES_FOUND |
-          | **simple_cpp** (C++) | $CPP_COV% | $CPP_LINES_HIT | $CPP_LINES |
-          
-          > 🟢 ≥ 80% &nbsp;&nbsp; 🟡 ≥ 60% &nbsp;&nbsp; 🟠 ≥ 40% &nbsp;&nbsp; 🔴 < 40%
-          
-          📁 Detailed HTML reports available in workflow artifacts.
-          EOF
-          
-          # Replace variables
-          sed -i "s/\$PY_COV/$PY_COV/g" coverage-pr-report.md
-          sed -i "s/\$PY_LINES_HIT/$PY_LINES_HIT/g" coverage-pr-report.md
-          sed -i "s/\$PY_LINES_FOUND/$PY_LINES_FOUND/g" coverage-pr-report.md
-          sed -i "s/\$CPP_COV/$CPP_COV/g" coverage-pr-report.md
-          sed -i "s/\$CPP_LINES_HIT/$CPP_LINES_HIT/g" coverage-pr-report.md
-          sed -i "s/\$CPP_LINES/$CPP_LINES/g" coverage-pr-report.md
-          
-          cat coverage-pr-report.md
+          # Convert Python coverage
+          if [ -f "build/simple_py/coverage.lcov" ]; then
+            python3 -m lcov_cobertura build/simple_py/coverage.lcov -o coverage-py.xml
+            echo "✅ Converted Python coverage to XML"
+          fi
+      
+      # Generate Coverage Report for PR (using Cobertura XML)
+      - name: Code Coverage Report
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        if: always()
+        with:
+          filename: 'coverage-cpp.xml,coverage-py.xml'
+          badge: true
+          fail_below_min: false
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: true
+          indicators: true
+          output: both
+          thresholds: '60 80'
       
       # Add coverage report to PR comment
       - name: Add Coverage PR Comment
@@ -197,7 +170,7 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           recreate: true
-          path: coverage-pr-report.md
+          path: code-coverage-results.md
       
       # Upload coverage reports as artifacts
       - name: Upload coverage reports
