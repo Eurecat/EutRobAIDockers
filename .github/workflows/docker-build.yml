@@ -3,7 +3,7 @@ name: Build, Test & Push Docker Image
 on:
   push:
     branches:
-      - feature/test-workflow
+      - main
   pull_request:
     branches:
       - main
@@ -26,12 +26,6 @@ jobs:
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       
       - name: Make build script executable
         run: chmod +x Docker/build_container.sh
@@ -74,20 +68,6 @@ jobs:
                        --pytest-args '-v' \
                        --return-code-on-test-failure || true"
 
-      # 🔍 Debug: List generated test files
-      # - name: List test result files
-      #   if: always()
-      #   run: |
-      #     echo "📁 Searching for test result files..."
-      #     echo "=== XML files found: ==="
-      #     find ${{ github.workspace }}/build -name "*.xml" -type f || echo "No XML files found"
-      #     echo ""
-      #     echo "=== Directory structure: ==="
-      #     ls -laR ${{ github.workspace }}/build/*/test_results/ 2>/dev/null || echo "Test results directory not found"
-      #     echo ""
-      #     echo "=== Build directory: ==="
-      #     ls -la ${{ github.workspace }}/build/ || echo "Build directory not found"
-
       # Generate human-readable test summary
       - name: Generate test summary
         if: always()
@@ -109,6 +89,72 @@ jobs:
           cat test_summary.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       
+            # Generate Test Report Badge
+      
+      - name: Generate test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: ROS 2 Tests
+          path: 'build/*/test_results/**/*.xml,build/*/pytest.xml'
+          reporter: java-junit
+          fail-on-error: false
+      
+      # Upload test result
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            build/*/test_results/**/*.xml
+            build/*/pytest.xml
+            log/latest_test/**/*.log
+            test_summary.txt
+      
+      # Create test badge (for README)
+      - name: Create test badge
+        if: always() && github.ref == 'refs/heads/main'
+        run: |
+          # Parse the summary line from test_summary.txt
+          # Example line: "Summary: 55 tests, 0 errors, 0 failures, 6 skipped"
+          if [ -f test_summary.txt ]; then
+            SUMMARY_LINE=$(grep "^Summary:" test_summary.txt)
+            
+            # Extract numbers using grep and cut
+            TOTAL=$(echo "$SUMMARY_LINE" | grep -oP '\d+(?= tests)' || echo "0")
+            FAILURES=$(echo "$SUMMARY_LINE" | grep -oP '\d+(?= failures)' || echo "0")
+            ERRORS=$(echo "$SUMMARY_LINE" | grep -oP '\d+(?= errors)' || echo "0")
+            
+            # Calculate passed tests (total - failures - errors)
+            PASSED=$((TOTAL - FAILURES - ERRORS))
+            FAILED=$((FAILURES + ERRORS))
+            
+            echo "📊 Badge stats: $PASSED passed / $FAILED failed (out of $TOTAL total)"
+          else
+            echo "⚠️ test_summary.txt not found, using defaults"
+            PASSED=0
+            FAILED=0
+          fi
+          
+          # Create badge JSON (shields.io endpoint format)
+          COLOR="success"
+          if [ $FAILED -gt 0 ]; then
+            COLOR="critical"
+          fi
+          
+          echo "{\"schemaVersion\": 1, \"label\": \"tests\", \"message\": \"$PASSED passed / $FAILED failed\", \"color\": \"$COLOR\"}" > test-badge.json
+          
+          cat test-badge.json
+
+      - name: Upload badge data
+        if: always() && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-badge
+          path: test-badge.json
+      
+
       # Generate code coverage reports
       - name: Generate coverage reports
         if: always()
@@ -183,70 +229,6 @@ jobs:
             build/simple_cpp/coverage_html/**
             coverage_summary.txt
       
-      # Generate Test Report Badge
-      - name: Generate Test Report
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: ROS 2 Tests
-          path: 'build/*/test_results/**/*.xml,build/*/pytest.xml'
-          reporter: java-junit
-          fail-on-error: false
-      
-      # Upload test result
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            build/*/test_results/**/*.xml
-            build/*/pytest.xml
-            log/latest_test/**/*.log
-            test_summary.txt
-      
-      # Create test badge (for README)
-      - name: Create test badge
-        if: always() && github.ref == 'refs/heads/main'
-        run: |
-          # Parse the summary line from test_summary.txt
-          # Example line: "Summary: 55 tests, 0 errors, 0 failures, 6 skipped"
-          if [ -f test_summary.txt ]; then
-            SUMMARY_LINE=$(grep "^Summary:" test_summary.txt)
-            
-            # Extract numbers using grep and cut
-            TOTAL=$(echo "$SUMMARY_LINE" | grep -oP '\d+(?= tests)' || echo "0")
-            FAILURES=$(echo "$SUMMARY_LINE" | grep -oP '\d+(?= failures)' || echo "0")
-            ERRORS=$(echo "$SUMMARY_LINE" | grep -oP '\d+(?= errors)' || echo "0")
-            
-            # Calculate passed tests (total - failures - errors)
-            PASSED=$((TOTAL - FAILURES - ERRORS))
-            FAILED=$((FAILURES + ERRORS))
-            
-            echo "📊 Badge stats: $PASSED passed / $FAILED failed (out of $TOTAL total)"
-          else
-            echo "⚠️ test_summary.txt not found, using defaults"
-            PASSED=0
-            FAILED=0
-          fi
-          
-          # Create badge JSON (shields.io endpoint format)
-          COLOR="success"
-          if [ $FAILED -gt 0 ]; then
-            COLOR="critical"
-          fi
-          
-          echo "{\"schemaVersion\": 1, \"label\": \"tests\", \"message\": \"$PASSED passed / $FAILED failed\", \"color\": \"$COLOR\"}" > test-badge.json
-          
-          cat test-badge.json
-
-      - name: Upload badge data
-        if: always() && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-badge
-          path: test-badge.json
-      
       # Create coverage badge (for README)
       - name: Create coverage badge
         if: always() && github.ref == 'refs/heads/main'
@@ -307,6 +289,12 @@ jobs:
         with:
           name: coverage-badge
           path: coverage-badge.json
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Tag image for Docker Hub
         if: github.ref == 'refs/heads/main'
