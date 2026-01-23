@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - jazzy-devel
   pull_request:
     branches:
       - main
+      - jazzy-devel
   workflow_dispatch:
 
 jobs:
