@@ -1,0 +1,15 @@
+{
+  "python.defaultInterpreterPath": "/usr/bin/python3.12",
+//   "python.terminal.activateEnvironment": true,
+
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+
+  "python.analysis.extraPaths": [
+    "/opt/ros/jazzy/lib/python3.12/site-packages",
+    "/opt/ros_python_env/lib/python3.12/site-packages/",
+    "/workspace/src"
+  ],
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.pythonProjects": []
+}

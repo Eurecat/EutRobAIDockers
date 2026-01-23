@@ -28,9 +28,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install pip, uv and Python development packages
 RUN apt-get update && apt-get install -y \
+    lcov \
     python3-pip \
     python3-dev \
     python3-venv \
+    python3-pytest python3-pytest-cov \
     build-essential \
     python3-rosdep \
     python3-colcon-common-extensions \
@@ -38,6 +40,8 @@ RUN apt-get update && apt-get install -y \
     git \
     wget \
     terminator \
+    gosu \
+    nano \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (fast Python package installer) via pip with system packages override
@@ -102,6 +106,10 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash; colcon build --event
 # ####################################################################################################
 # [NOT DONE atm] User created during build - switch to non-root user
 # ####################################################################################################
+
+# Copy coverage script for automated testing within CI/CD
+COPY quick_coverage.sh /quick_coverage.sh
+RUN chmod +x /quick_coverage.sh
 
 # Copy and set up the entrypoint script
 COPY entrypoint.sh /entrypoint.sh

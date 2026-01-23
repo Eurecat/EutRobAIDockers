@@ -1,7 +1,7 @@
 name: coghri_robai
 
 services:
-  eut_robai:
+  dev-eut_robai:
     container_name: "eut_robai"
     network_mode: host 
     ipc: host
@@ -15,21 +15,23 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ~/.xauth_docker/share/:/tmp/xauth/
       - ./.vscode:/workspace/.vscode
+      - ../simple_cpp:/workspace/src/simple_cpp
       - ../simple_py:/workspace/src/simple_py
+      - ./dev-entrypoint.sh:/entrypoint.sh:rw # Override entrypoint
 
     tty: true
     stdin_open: true
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}    
-      # - USER_ID=${USER_ID}
-      # - GROUP_ID=${GROUP_ID}
-      # - USERNAME=${USERNAME}
+      - USER_ID=${USER_ID}
+      - GROUP_ID=${GROUP_ID}
+      - USERNAME=${USERNAME}
       - NVIDIA_VISIBLE_DEVICES=all 
       - DISPLAY=$DISPLAY
       - QT_X11_NO_MITSHM=1
       - XAUTHORITY=/tmp/xauth/.docker.xauth    
       - AI_VENV=/opt/ros_python_env   
-      # - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}  
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}  
       # - PULSE_SERVER=unix:/run/user/${USER_ID}/pulse/native
       # - PULSE_COOKIE=/home/coghri/.config/pulse/cookie
       # - ALSA_CARD=${ALSA_CARD}  # Set to the card number for your speaker

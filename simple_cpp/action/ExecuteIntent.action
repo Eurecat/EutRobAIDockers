@@ -1,0 +1,18 @@
+# Goal - Intent to execute
+string action_verb
+string target_object
+string[] modalities
+float64 confidence_score
+int32 priority_level
+
+---
+# Result - Execution outcome
+bool success
+string[] executed_plan
+string final_state
+
+---
+# Feedback - Progress updates
+string current_step
+int32 steps_completed
+int32 total_steps
