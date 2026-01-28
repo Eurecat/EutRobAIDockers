@@ -237,7 +237,7 @@ jobs:
           if [ -f "build/simple_py/coverage.lcov" ]; then
             PY_LINES_HIT=$(grep -E "^LH:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
             PY_LINES_FOUND=$(grep -E "^LF:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
-            if [ "$PY_LINES_FOUND" -gt 0 ]; then
+            if [ -n "$PY_LINES_FOUND" ] && [ "$PY_LINES_FOUND" -gt 0 ]; then
               PY_COV_PCT=$(awk "BEGIN {printf \"%.0f\", ($PY_LINES_HIT/$PY_LINES_FOUND)*100}")
             else
               PY_COV_PCT=0
@@ -249,18 +249,19 @@ jobs:
           # Extract C++ coverage percentage
           if [ -f "build/simple_cpp/coverage_filtered.info" ]; then
             source Docker/.env
-            docker run --rm \
+            # Use --entrypoint to bypass the custom entrypoint
+            CPP_COV_RAW=$(docker run --rm --entrypoint="" \
               -v ${{ github.workspace }}:/workspace \
               -w /workspace \
               ${BUILT_IMAGE} \
-              bash -c "lcov --summary build/simple_cpp/coverage_filtered.info 2>&1 | grep -oP 'lines......: \K[0-9.]+' || echo '0'" > cpp_cov.txt
-            CPP_COV_PCT=$(cat cpp_cov.txt | cut -d. -f1)
+              bash -c "lcov --summary build/simple_cpp/coverage_filtered.info 2>&1 | grep -oP 'lines......: \K[0-9.]+' || echo '0'")
+            CPP_COV_PCT=$(echo "$CPP_COV_RAW" | head -n1 | cut -d. -f1)
           else
             CPP_COV_PCT=0
           fi
           
           # Calculate average coverage
-          if [ $PY_COV_PCT -gt 0 ] || [ $CPP_COV_PCT -gt 0 ]; then
+          if [ "$PY_COV_PCT" -gt 0 ] || [ "$CPP_COV_PCT" -gt 0 ]; then
             AVG_COV=$(( (PY_COV_PCT + CPP_COV_PCT) / 2 ))
           else
             AVG_COV=0
