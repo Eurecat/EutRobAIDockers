@@ -234,15 +234,28 @@ jobs:
         if: always() && github.ref == 'refs/heads/jazzy'
         run: |
           # Extract Python coverage percentage from lcov file
+          echo "🔍 Checking for Python coverage files..."
+          ls -la build/simple_py/ 2>/dev/null || echo "build/simple_py/ not found"
+          
           if [ -f "build/simple_py/coverage.lcov" ]; then
+            echo "✅ Found build/simple_py/coverage.lcov"
+            echo "📄 First 30 lines:"
+            head -n 30 build/simple_py/coverage.lcov
+            
             PY_LINES_HIT=$(grep -E "^LH:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
             PY_LINES_FOUND=$(grep -E "^LF:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
+            
+            echo "📊 Extracted: LH=$PY_LINES_HIT, LF=$PY_LINES_FOUND"
+            
             if [ -n "$PY_LINES_FOUND" ] && [ "$PY_LINES_FOUND" -gt 0 ]; then
               PY_COV_PCT=$(awk "BEGIN {printf \"%.0f\", ($PY_LINES_HIT/$PY_LINES_FOUND)*100}")
+              echo "✅ Python Coverage: $PY_COV_PCT%"
             else
+              echo "⚠️ Invalid LF value: '$PY_LINES_FOUND'"
               PY_COV_PCT=0
             fi
           else
+            echo "❌ build/simple_py/coverage.lcov not found"
             PY_COV_PCT=0
           fi
           
@@ -340,7 +353,7 @@ jobs:
           docker tag ${BUILT_IMAGE} ${DOCKERHUB_ORG}/eutrobai:${TARGET_DISTRO}
       
       - name: Push to Docker Hub
-        if: github.ref == 'refs/heads/jazzy'
+        if: github.ref == 'none'
         run: |
           source Docker/.env
           DOCKERHUB_ORG=${{ secrets.DOCKERHUB_ORG }}

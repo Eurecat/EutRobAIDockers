@@ -18,6 +18,7 @@ services:
       - ../simple_cpp:/workspace/src/simple_cpp
       - ../simple_py:/workspace/src/simple_py
       - ./dev-entrypoint.sh:/entrypoint.sh:rw # Override entrypoint
+      - ./quick_test_coverage.sh:/workspace/quick_test_coverage.sh
 
     tty: true
     stdin_open: true
