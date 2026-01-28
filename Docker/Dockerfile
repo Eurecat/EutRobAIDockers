@@ -107,6 +107,10 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash; colcon build --event
 # [NOT DONE atm] User created during build - switch to non-root user
 # ####################################################################################################
 
+# Copy coverage script for automated testing within CI/CD
+COPY ci_cd_coverage.sh /ci_cd_coverage.sh
+RUN chmod +x /ci_cd_coverage.sh
+
 # Copy and set up the entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
