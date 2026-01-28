@@ -1,5 +1,9 @@
 # EutRobAI Docker Base Images
 
+[![Build Status](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml/badge.svg?branch=jazzy)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml?query=branch%3Ajazzy)
+[![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/test-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/coverage-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
+
 This repository provides a **configurable Docker base image** for robotics and AI development, offering minimal and reproducible Docker setup with **PyTorch** support and choice between different ROS 2 distributions.
 
 The purpose is to serve as a **flexible base container** for robotics and AI projects, ensuring consistency and portability across environments while allowing teams to choose between standard ROS 2 or Vulcanexus distributions.

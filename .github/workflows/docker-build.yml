@@ -3,12 +3,12 @@ name: Build, Test & Push Docker Image
 on:
   push:
     branches:
-      - main
-      - jazzy-devel
+      # - main
+      - jazzy
   pull_request:
     branches:
-      - main
-      - jazzy-devel
+      # - main
+      - jazzy
   workflow_dispatch:
 
 jobs:
@@ -91,8 +91,6 @@ jobs:
           cat test_summary.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       
-            # Generate Test Report Badge
-      
       - name: Generate test Report
         uses: dorny/test-reporter@v1
         if: always()
@@ -116,7 +114,7 @@ jobs:
       
       # Create test badge (for README)
       - name: Create test badge
-        if: always() && github.ref == 'refs/heads/main'
+        if: always() && github.ref == 'refs/heads/jazzy'
         run: |
           # Parse the summary line from test_summary.txt
           # Example line: "Summary: 55 tests, 0 errors, 0 failures, 6 skipped"
@@ -150,7 +148,7 @@ jobs:
           cat test-badge.json
 
       - name: Upload badge data
-        if: always() && github.ref == 'refs/heads/main'
+        if: always() && github.ref == 'refs/heads/jazzy'
         uses: actions/upload-artifact@v4
         with:
           name: test-badge
@@ -233,7 +231,7 @@ jobs:
       
       # Create coverage badge (for README)
       - name: Create coverage badge
-        if: always() && github.ref == 'refs/heads/main'
+        if: always() && github.ref == 'refs/heads/jazzy'
         run: |
           # Extract Python coverage percentage from lcov file
           if [ -f "build/simple_py/coverage.lcov" ]; then
@@ -286,11 +284,43 @@ jobs:
           cat coverage-badge.json
 
       - name: Upload coverage badge data
-        if: always() && github.ref == 'refs/heads/main'
+        if: always() && github.ref == 'refs/heads/jazzy'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-badge
           path: coverage-badge.json
+      
+      # Publish badges to badges branch for shields.io endpoint
+      - name: Publish badges to badges branch
+        if: always() && github.ref == 'refs/heads/jazzy'
+        run: |
+          # Determine branch name for badge directory
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            BRANCH_NAME="main"
+          else
+            BRANCH_NAME="jazzy"
+          fi
+          
+          # Setup git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Fetch and checkout badges branch (create if doesn't exist)
+          git fetch origin badges 2>/dev/null || true
+          git checkout badges 2>/dev/null || git checkout --orphan badges
+          
+          # Clean working directory and create structure
+          git rm -rf . 2>/dev/null || true
+          mkdir -p ${BRANCH_NAME}
+          
+          # Copy badge files
+          cp ${{ github.workspace }}/test-badge.json ${BRANCH_NAME}/ 2>/dev/null || echo "No test badge"
+          cp ${{ github.workspace }}/coverage-badge.json ${BRANCH_NAME}/ 2>/dev/null || echo "No coverage badge"
+          
+          # Add, commit and push
+          git add ${BRANCH_NAME}/
+          git diff --staged --quiet || git commit -m "Update badges for ${BRANCH_NAME} [skip ci]"
+          git push origin badges 2>/dev/null || git push --set-upstream origin badges
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -299,7 +329,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Tag image for Docker Hub
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/jazzy'
         run: |
           # Get the image name from .env file
           source Docker/.env
@@ -309,10 +339,10 @@ jobs:
           docker tag ${BUILT_IMAGE} ${DOCKERHUB_ORG}/eutrobai:${TARGET_DISTRO}
       
       - name: Push to Docker Hub
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/jazzy'
         run: |
           source Docker/.env
           DOCKERHUB_ORG=${{ secrets.DOCKERHUB_ORG }}
           
-          # Push the main Tag
+          # Push the image to Docker Hub
           docker push ${DOCKERHUB_ORG}/eutrobai:${TARGET_DISTRO}
