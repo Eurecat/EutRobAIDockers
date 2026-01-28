@@ -234,16 +234,23 @@ jobs:
         if: always() && github.ref == 'refs/heads/jazzy'
         run: |
           # Extract Python coverage percentage from lcov file
-          echo "🔍 Checking for Python coverage files..."
-          ls -la build/simple_py/ 2>/dev/null || echo "build/simple_py/ not found"
+          echo "🔍 Searching for Python coverage files..."
+          find . -name "coverage.lcov" -o -name ".coverage" 2>/dev/null | head -20
           
+          # Check multiple possible locations
+          PY_LCOV_FILE=""
           if [ -f "build/simple_py/coverage.lcov" ]; then
-            echo "✅ Found build/simple_py/coverage.lcov"
-            echo "📄 First 30 lines:"
-            head -n 30 build/simple_py/coverage.lcov
-            
-            PY_LINES_HIT=$(grep -E "^LH:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
-            PY_LINES_FOUND=$(grep -E "^LF:" build/simple_py/coverage.lcov | cut -d: -f2 | awk '{s+=$1} END {print s}')
+            PY_LCOV_FILE="build/simple_py/coverage.lcov"
+            echo "✅ Found at: build/simple_py/coverage.lcov"
+          elif [ -f "simple_py/coverage.lcov" ]; then
+            PY_LCOV_FILE="simple_py/coverage.lcov"
+            echo "✅ Found at: simple_py/coverage.lcov"
+          fi
+          
+          if [ -n "$PY_LCOV_FILE" ]; then
+            echo "📄 Reading from: $PY_LCOV_FILE"
+            PY_LINES_HIT=$(grep -E "^LH:" "$PY_LCOV_FILE" | cut -d: -f2 | awk '{s+=$1} END {print s}')
+            PY_LINES_FOUND=$(grep -E "^LF:" "$PY_LCOV_FILE" | cut -d: -f2 | awk '{s+=$1} END {print s}')
             
             echo "📊 Extracted: LH=$PY_LINES_HIT, LF=$PY_LINES_FOUND"
             
@@ -255,7 +262,8 @@ jobs:
               PY_COV_PCT=0
             fi
           else
-            echo "❌ build/simple_py/coverage.lcov not found"
+            echo "❌ Python coverage.lcov not found in any location"
+            echo "⚠️ The /quick_coverage.sh script may not have generated it"
             PY_COV_PCT=0
           fi
           
