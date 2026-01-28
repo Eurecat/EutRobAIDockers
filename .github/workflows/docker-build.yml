@@ -361,7 +361,7 @@ jobs:
           docker tag ${BUILT_IMAGE} ${DOCKERHUB_ORG}/eutrobai:${TARGET_DISTRO}
       
       - name: Push to Docker Hub
-        if: github.ref == 'none'
+        if: github.ref == 'none' # IGNORE for now the push, replace it with main branch or jazzy when ready to publish from protected branch
         run: |
           source Docker/.env
           DOCKERHUB_ORG=${{ secrets.DOCKERHUB_ORG }}

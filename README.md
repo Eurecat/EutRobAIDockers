@@ -130,6 +130,29 @@ colcon test --packages-select simple_cpp --event-handlers console_direct+
 colcon test --packages-select simple_py --pytest-args '-v'
 ```
 
+### 🔍 Local CI/CD Verification
+
+Before pushing changes, you can verify the entire CI/CD pipeline locally using the **verification script** inside the Docker container:
+
+```bash
+# Inside the container, run with all packages
+/quick_test_coverage.sh --all
+
+# Or specify packages explicitly
+/quick_test_coverage.sh --cpp simple_cpp --python simple_py
+
+# Clean build before testing
+/quick_test_coverage.sh --all --clean
+```
+
+This script mirrors the GitHub Actions workflow and provides:
+- ✅ Build validation with coverage instrumentation
+- 🧪 Test execution with detailed results
+- 📊 Coverage report generation (HTML + LCOV)
+- 📈 Coverage statistics summary
+
+See `--help` for all options. This ensures your changes will pass CI before pushing.
+
 ### � Code Coverage
 
 The repository includes a **quick coverage generation script** that produces coverage reports for both Python and C++ packages.
@@ -170,7 +193,7 @@ colcon test --packages-select simple_cpp
 ### �🔄 CI/CD Integration
 
 Tests are **automatically executed** on every push and pull request via [GitHub Actions](.github/workflows/docker-build.yml):
-
+**For detailed instructions on setting up this CI/CD pipeline in your own repository, see [CI/CD Setup Guide](CI_CD_SETUP.md).**
 1. **Build**: Docker image is built with the configured ROS distribution
 2. **Test**: Both `simple_cpp` and `simple_py` tests run inside the container
 3. **Coverage**: Code coverage reports generated for both packages
