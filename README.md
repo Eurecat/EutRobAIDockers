@@ -153,30 +153,6 @@ This script mirrors the GitHub Actions workflow and provides:
 
 See `--help` for all options. This ensures your changes will pass CI before pushing.
 
-### � Code Coverage
-
-The repository includes a **quick coverage generation script** that produces coverage reports for both Python and C++ packages.
-**Prerequisites**: Ensure coverage tools are installed:
-- **C++**: `lcov` (included in Docker image)
-- **Python**: `pytest-cov` (included in Docker image)
-
-**Note**: Coverage artifacts (`htmlcov/`, `coverage.lcov`, `*.gcda`, `*.gcno`, `coverage_html/`) should be added to `.gitignore`.
-#### Running Coverage Locally
-
-Inside the Docker container:
-```bash
-/quick_coverage.sh
-```
-
-Or from the host:
-```bash
-docker run --rm -v $(pwd):/workspace -w /workspace eut_ros_torch:jazzy /quick_coverage.sh
-```
-
-**What it does**:
-- **Python (simple_py)**: Generates pytest coverage reports with HTML output
-- **C++ (simple_cpp)**: Uses lcov/genhtml to generate coverage reports (requires rebuild with coverage flags)
-
 **Coverage Reports Location**:
 - Python: `simple_py/htmlcov/index.html`
 - C++: `build/simple_cpp/coverage_html/index.html`

@@ -164,7 +164,7 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ${BUILT_IMAGE} \
-            bash -c "/quick_coverage.sh" \
+            bash -c "/ci_cd_coverage.sh" \
             > coverage_summary.txt || true
           
           # Display in logs
@@ -263,7 +263,7 @@ jobs:
             fi
           else
             echo "❌ Python coverage.lcov not found in any location"
-            echo "⚠️ The /quick_coverage.sh script may not have generated it"
+            echo "⚠️ The /ci_cd_coverage.sh script may not have generated it"
             PY_COV_PCT=0
           fi
           

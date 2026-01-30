@@ -117,7 +117,7 @@ The workflow file is located at [`.github/workflows/docker-build.yml`](.github/w
 #### Stage 3: Coverage Generation
 ```yaml
 - name: Generate coverage reports
-  run: docker run --rm ... bash -c "/quick_coverage.sh"
+  run: docker run --rm ... bash -c "/ci_cd_coverage.sh"
 ```
 - Generates HTML coverage reports
 - Creates LCOV format for badge generation
@@ -363,7 +363,7 @@ docker push ${DOCKERHUB_ORG}/image:tag
 
 **Solution:**
 1. Check "Generate coverage reports" step logs
-2. Verify `/quick_coverage.sh` exists in container
+2. Verify `/ci_cd_coverage.sh` exists in container
 3. Check Python package uses pytest-cov:
    ```toml
    [tool.pytest.ini_options]
@@ -455,7 +455,7 @@ If issues persist:
 ```
 .github/workflows/docker-build.yml    # Main workflow
 Docker/quick_test_coverage.sh         # Local verification script
-Docker/quick_coverage.sh               # Coverage generation script
+Docker/ci_cd_coverage.sh               # Coverage generation script
 ```
 
 ### Secrets to Set
