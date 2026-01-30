@@ -210,3 +210,7 @@ skeleton_detection/weights
 log/
 install/
 Docker/deps/
+
+# Docker logs - ignore all except README
+Docker/logs/*
+!Docker/logs/README.md

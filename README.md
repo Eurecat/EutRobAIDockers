@@ -4,6 +4,24 @@
 [![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/test-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/coverage-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
 
+## What This Repository Does
+
+**EutRobAIDockers** provides the foundational Docker base images for the entire EutPerceptionStack. It serves as the common container base for all perception modules, ensuring consistent development and deployment environments across the stack. All other repositories (EutHRIFaces, EutEntityDetection, EutHRIHumanBody, EutPersonManager, eut_speech_audio_processing) build their containers on top of these base images.
+
+<p align="center">
+  <img src="Docker/imgs/perceptionstack_diagram.jpeg" alt="Base Docker Architecture" width="800"/>
+</p>
+
+## Key Characteristics
+
+- 🐳 **Foundation for EutPerceptionStack**: All perception modules build from these base images
+- 🎛️ **Dual ROS2 Distributions**: Support for both standard ROS2 Jazzy and Vulcanexus Jazzy
+- 🔥 **PyTorch Integration**: Pre-configured deep learning environment with GPU support
+- 🔧 **Configurable Build**: Single Dockerfile with build arguments for different configurations
+- 🧪 **Reference Implementations**: Template C++ and Python packages for testing and development
+- 🚀 **Production Ready**: CI/CD pipelines with automated testing and coverage reporting
+- 📦 **Minimal & Reproducible**: Optimized for consistency and portability
+
 This repository provides a **configurable Docker base image** for robotics and AI development, offering minimal and reproducible Docker setup with **PyTorch** support and choice between different ROS 2 distributions.
 
 The purpose is to serve as a **flexible base container** for robotics and AI projects, ensuring consistency and portability across environments while allowing teams to choose between standard ROS 2 or Vulcanexus distributions.
@@ -25,6 +43,18 @@ The purpose is to serve as a **flexible base container** for robotics and AI pro
   - **Visual perception** (entity/person detection, skeletons, posture, gestures, faces, gaze)
   - **Multimodal knowledge integration** (person manager, identity tracking)
 
+## 🏗️ EutPerceptionStack Architecture
+
+This base image serves as the foundation for the complete perception stack:
+
+**Repositories Built on EutRobAIDockers:**
+- **[EutHRIFaces](https://github.com/Eurecat/EutHRIFaces)**: Face detection, recognition, gaze estimation, and visual speech activity
+- **[EutEntityDetection](https://github.com/Eurecat/EutEntityDetection)**: YOLO-based object and person detection with tracking
+- **[EutHRIHumanBody](https://github.com/Eurecat/EutHRIHumanBody)**: Person detection filtering and skeleton keypoint estimation
+- **[EutPersonManager](https://github.com/Eurecat/EutPersonManager)**: Multi-modal person fusion (body, face, skeleton, gaze)
+- **[eut_speech_audio_processing](https://github.com/Eurecat/eut_speech_audio_processing)**: Audio stream management, VAD, diarization, and ASR
+
+All these repositories reference EutRobAIDockers as their base image and extend it with domain-specific dependencies and models.
 
 <p align="center">
   <img src="a05eb063-7279-4bdb-88d5-3ed93e5b2141.png" width="720"/>
