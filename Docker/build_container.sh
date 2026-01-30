@@ -59,12 +59,20 @@ for arg in "$@"; do
         REBUILD=true
     fi
     if [ "$arg" == "--vulcanexus" ]; then
+        USE_VULCANEXUS=true
         BASE_IMAGE="eprosima/vulcanexus:jazzy-desktop"
     fi
     if [ "$arg" == "--cpu" ]; then
         CPU_ONLY="true"
     fi
 done
+
+# Validate that Vulcanexus and Humble are not used together
+if $USE_VULCANEXUS && $USE_HUMBLE; then
+    echo "ERROR: --vulcanexus and --humble cannot be used together."
+    echo "Vulcanexus is only available for Jazzy."
+    exit 1
+fi
 
 if $REBUILD; then # remove all files just in case some modifications have been made and git pull does not work
     echo "Rebuilding: cleaning up dependencies..."
@@ -93,6 +101,7 @@ fi
 echo "Base image: ${BASE_IMAGE}"
 echo "CPU Only: ${CPU_ONLY}"
 echo "Output image: ${IMAGE_NAME}"
+echo "Python version: ${PYTHON_VERSION}"
 
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
