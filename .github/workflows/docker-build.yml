@@ -15,6 +15,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
+    env:
+      # Package Configuration - Define your ROS2 packages here
+      CPP_PACKAGES: "simple_cpp"
+      PY_PACKAGES: "simple_py"
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,22 +58,35 @@ jobs:
       - name: Build & test workspace
         run: |
           source Docker/.env
+          
+          # Build all packages
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             ${BUILT_IMAGE} \
-            bash -c "source /opt/ros/${TARGET_DISTRO}/setup.bash && \
-                     colcon build --symlink-install \
-                       --packages-select simple_cpp \
-                       --cmake-args -DCMAKE_CXX_FLAGS='--coverage' \
-                                    -DCMAKE_C_FLAGS='--coverage' \
-                                    -DCMAKE_EXE_LINKER_FLAGS='--coverage' && \
-                     colcon build --symlink-install \
-                       --packages-skip simple_cpp && \
-                     colcon test \
-                       --event-handlers console_direct+ \
-                       --pytest-args '-v' \
-                       --return-code-on-test-failure || true"
+            bash -c "
+              source /opt/ros/${TARGET_DISTRO}/setup.bash
+              
+              # Build all C++ packages with coverage flags (colcon handles multiple packages)
+              echo '🔨 Building C++ packages: ${{ env.CPP_PACKAGES }}'
+              colcon build --symlink-install \
+                --packages-select ${{ env.CPP_PACKAGES }} \
+                --cmake-args -DCMAKE_CXX_FLAGS='--coverage' \
+                             -DCMAKE_C_FLAGS='--coverage' \
+                             -DCMAKE_EXE_LINKER_FLAGS='--coverage'
+              
+              # Build all Python packages
+              echo '🔨 Building Python packages: ${{ env.PY_PACKAGES }}'
+              colcon build --symlink-install \
+                --packages-select ${{ env.PY_PACKAGES }}
+              
+              # Run all tests
+              echo '🧪 Running tests for all packages...'
+              colcon test \
+                --event-handlers console_direct+ \
+                --pytest-args '-v' \
+                --return-code-on-test-failure || true
+            "
 
       # Generate human-readable test summary
       - name: Generate test summary
@@ -183,24 +201,28 @@ jobs:
         run: |
           python3 -m pip install lcov_cobertura
           
-          # Convert C++ coverage
-          if [ -f "build/simple_cpp/coverage_filtered.info" ]; then
-            python3 -m lcov_cobertura build/simple_cpp/coverage_filtered.info -o coverage-cpp.xml
-            echo "✅ Converted C++ coverage to XML"
-          fi
+          # Convert C++ coverage for all packages
+          for pkg in ${{ env.CPP_PACKAGES }}; do
+            if [ -f "build/${pkg}/coverage_filtered.info" ]; then
+              python3 -m lcov_cobertura build/${pkg}/coverage_filtered.info -o coverage-cpp-${pkg}.xml
+              echo "✅ Converted C++ coverage for ${pkg} to XML"
+            fi
+          done
           
-          # Convert Python coverage
-          if [ -f "build/simple_py/coverage.lcov" ]; then
-            python3 -m lcov_cobertura build/simple_py/coverage.lcov -o coverage-py.xml
-            echo "✅ Converted Python coverage to XML"
-          fi
+          # Convert Python coverage for all packages
+          for pkg in ${{ env.PY_PACKAGES }}; do
+            if [ -f "build/${pkg}/coverage.lcov" ]; then
+              python3 -m lcov_cobertura build/${pkg}/coverage.lcov -o coverage-py-${pkg}.xml
+              echo "✅ Converted Python coverage for ${pkg} to XML"
+            fi
+          done
       
       # Generate Coverage Report for PR (using Cobertura XML)
       - name: Code Coverage Report
         uses: irongut/CodeCoverageSummary@v1.3.0
         if: always()
         with:
-          filename: 'coverage-cpp.xml,coverage-py.xml'
+          filename: 'coverage-*.xml'
           badge: true
           fail_below_min: false
           format: markdown
@@ -225,9 +247,10 @@ jobs:
         with:
           name: coverage-reports
           path: |
-            simple_py/htmlcov/**
-            build/simple_cpp/coverage_html/**
+            */htmlcov/**
+            build/*/coverage_html/**
             coverage_summary.txt
+            coverage-*.xml
       
       # Create coverage badge (for README)
       - name: Create coverage badge
@@ -237,51 +260,73 @@ jobs:
           echo "🔍 Searching for Python coverage files..."
           find . -name "coverage.lcov" -o -name ".coverage" 2>/dev/null | head -20
           
-          # Check multiple possible locations
-          PY_LCOV_FILE=""
-          if [ -f "build/simple_py/coverage.lcov" ]; then
-            PY_LCOV_FILE="build/simple_py/coverage.lcov"
-            echo "✅ Found at: build/simple_py/coverage.lcov"
-          elif [ -f "simple_py/coverage.lcov" ]; then
-            PY_LCOV_FILE="simple_py/coverage.lcov"
-            echo "✅ Found at: simple_py/coverage.lcov"
-          fi
+          # Extract Python coverage for all packages
+          PY_TOTAL_LINES_HIT=0
+          PY_TOTAL_LINES_FOUND=0
           
-          if [ -n "$PY_LCOV_FILE" ]; then
-            echo "📄 Reading from: $PY_LCOV_FILE"
-            PY_LINES_HIT=$(grep -E "^LH:" "$PY_LCOV_FILE" | cut -d: -f2 | awk '{s+=$1} END {print s}')
-            PY_LINES_FOUND=$(grep -E "^LF:" "$PY_LCOV_FILE" | cut -d: -f2 | awk '{s+=$1} END {print s}')
+          for pkg in ${{ env.PY_PACKAGES }}; do
+            echo "🔍 Checking Python coverage for: ${pkg}"
+            PY_LCOV_FILE=""
             
-            echo "📊 Extracted: LH=$PY_LINES_HIT, LF=$PY_LINES_FOUND"
-            
-            if [ -n "$PY_LINES_FOUND" ] && [ "$PY_LINES_FOUND" -gt 0 ]; then
-              PY_COV_PCT=$(awk "BEGIN {printf \"%.0f\", ($PY_LINES_HIT/$PY_LINES_FOUND)*100}")
-              echo "✅ Python Coverage: $PY_COV_PCT%"
-            else
-              echo "⚠️ Invalid LF value: '$PY_LINES_FOUND'"
-              PY_COV_PCT=0
+            if [ -f "build/${pkg}/coverage.lcov" ]; then
+              PY_LCOV_FILE="build/${pkg}/coverage.lcov"
+              echo "✅ Found at: build/${pkg}/coverage.lcov"
+            elif [ -f "${pkg}/coverage.lcov" ]; then
+              PY_LCOV_FILE="${pkg}/coverage.lcov"
+              echo "✅ Found at: ${pkg}/coverage.lcov"
             fi
+            
+            if [ -n "$PY_LCOV_FILE" ]; then
+              PKG_LINES_HIT=$(grep -E "^LH:" "$PY_LCOV_FILE" | cut -d: -f2 | awk '{s+=$1} END {print s}')
+              PKG_LINES_FOUND=$(grep -E "^LF:" "$PY_LCOV_FILE" | cut -d: -f2 | awk '{s+=$1} END {print s}')
+              PY_TOTAL_LINES_HIT=$((PY_TOTAL_LINES_HIT + PKG_LINES_HIT))
+              PY_TOTAL_LINES_FOUND=$((PY_TOTAL_LINES_FOUND + PKG_LINES_FOUND))
+              echo "📊 ${pkg}: LH=$PKG_LINES_HIT, LF=$PKG_LINES_FOUND"
+            fi
+          done
+          
+          if [ "$PY_TOTAL_LINES_FOUND" -gt 0 ]; then
+            PY_COV_PCT=$(awk "BEGIN {printf \"%.0f\", ($PY_TOTAL_LINES_HIT/$PY_TOTAL_LINES_FOUND)*100}")
+            echo "✅ Total Python Coverage: $PY_COV_PCT%"
           else
-            echo "❌ Python coverage.lcov not found in any location"
-            echo "⚠️ The /ci_cd_coverage.sh script may not have generated it"
+            echo "⚠️ No Python coverage data found"
             PY_COV_PCT=0
           fi
           
-          # Extract C++ coverage percentage
-          if [ -f "build/simple_cpp/coverage_filtered.info" ]; then
-            source Docker/.env
-            # Use --entrypoint to bypass the custom entrypoint
-            CPP_COV_RAW=$(docker run --rm --entrypoint="" \
-              -v ${{ github.workspace }}:/workspace \
-              -w /workspace \
-              ${BUILT_IMAGE} \
-              bash -c "lcov --summary build/simple_cpp/coverage_filtered.info 2>&1 | grep -oP 'lines......: \K[0-9.]+' || echo '0'")
-            CPP_COV_PCT=$(echo "$CPP_COV_RAW" | head -n1 | cut -d. -f1)
+          # Extract C++ coverage for all packages
+          CPP_TOTAL_LINES_HIT=0
+          CPP_TOTAL_LINES_FOUND=0
+          
+          source Docker/.env
+          for pkg in ${{ env.CPP_PACKAGES }}; do
+            echo "🔍 Checking C++ coverage for: ${pkg}"
+            if [ -f "build/${pkg}/coverage_filtered.info" ]; then
+              # Use --entrypoint to bypass the custom entrypoint
+              PKG_COV_DATA=$(docker run --rm --entrypoint="" \
+                -v ${{ github.workspace }}:/workspace \
+                -w /workspace \
+                ${BUILT_IMAGE} \
+                bash -c "lcov --summary build/${pkg}/coverage_filtered.info 2>&1 | grep 'lines' || echo 'lines......: 0.0%'")
+              
+              PKG_LINES=$(echo "$PKG_COV_DATA" | grep -oP '\d+ of \d+' || echo '0 of 0')
+              PKG_LINES_HIT=$(echo "$PKG_LINES" | cut -d' ' -f1)
+              PKG_LINES_FOUND=$(echo "$PKG_LINES" | cut -d' ' -f3)
+              
+              CPP_TOTAL_LINES_HIT=$((CPP_TOTAL_LINES_HIT + PKG_LINES_HIT))
+              CPP_TOTAL_LINES_FOUND=$((CPP_TOTAL_LINES_FOUND + PKG_LINES_FOUND))
+              echo "📊 ${pkg}: Hit=$PKG_LINES_HIT, Total=$PKG_LINES_FOUND"
+            fi
+          done
+          
+          if [ "$CPP_TOTAL_LINES_FOUND" -gt 0 ]; then
+            CPP_COV_PCT=$(awk "BEGIN {printf \"%.0f\", ($CPP_TOTAL_LINES_HIT/$CPP_TOTAL_LINES_FOUND)*100}")
+            echo "✅ Total C++ Coverage: $CPP_COV_PCT%"
           else
             CPP_COV_PCT=0
           fi
           
           # Calculate average coverage
+          TOTAL_PACKAGES=$(echo "${{ env.CPP_PACKAGES }} ${{ env.PY_PACKAGES }}" | wc -w)
           if [ "$PY_COV_PCT" -gt 0 ] || [ "$CPP_COV_PCT" -gt 0 ]; then
             AVG_COV=$(( (PY_COV_PCT + CPP_COV_PCT) / 2 ))
           else
