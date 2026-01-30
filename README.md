@@ -168,8 +168,12 @@ colcon test --packages-select simple_cpp
 
 ### �🔄 CI/CD Integration
 
-Tests are **automatically executed** on every push and pull request via [GitHub Actions](.github/workflows/docker-build.yml):
+Tests are **automatically executed** on every push and pull request via [GitHub Actions](.github/workflows/docker-build.yml).
+
+**Package Configuration**: The workflow uses centralized package definitions in [`.github/workflows/docker-build.yml`](.github/workflows/docker-build.yml#L18-L20) and [`Docker/ci_cd_coverage.sh`](Docker/ci_cd_coverage.sh#L4-L9), making it easy to adapt for your own packages.
+
 **For detailed instructions on setting up this CI/CD pipeline in your own repository, see [CI/CD Setup Guide](CI_CD_SETUP.md).**
+
 1. **Build**: Docker image is built with the configured ROS distribution
 2. **Test**: Both `simple_cpp` and `simple_py` tests run inside the container
 3. **Coverage**: Code coverage reports generated for both packages

@@ -181,22 +181,29 @@ on:
 
 ### Step 3: Customize Package Names
 
-Replace `simple_cpp` and `simple_py` with your package names:
+**Package names are now centralized!** Edit the environment variables at the top of the workflow file:
 
 ```yaml
-# Build C++ packages
-colcon build --symlink-install \
-  --packages-select YOUR_CPP_PACKAGE \
-  --cmake-args -DCMAKE_CXX_FLAGS='--coverage' ...
-
-# Build Python packages  
-colcon build --symlink-install \
-  --packages-skip YOUR_CPP_PACKAGE
+env:
+  # Package Configuration - Define your ROS2 packages here
+  CPP_PACKAGES: "YOUR_CPP_PACKAGE"
+  PY_PACKAGES: "YOUR_PY_PACKAGE"
 ```
 
-**For multiple packages:**
+**For multiple packages** (space-separated):
 ```yaml
---packages-select pkg1 pkg2 pkg3
+env:
+  CPP_PACKAGES: "pkg1 pkg2 pkg3"
+  PY_PACKAGES: "py_pkg1 py_pkg2"
+```
+
+The workflow automatically uses these variables throughout all steps (build, test, coverage). No need to update package names in multiple places!
+
+**Similarly, update [`Docker/ci_cd_coverage.sh`](Docker/ci_cd_coverage.sh):**
+```bash
+# PACKAGE CONFIGURATION
+CPP_PACKAGES=("YOUR_CPP_PACKAGE")
+PY_PACKAGES=("YOUR_PY_PACKAGE")
 ```
 
 ### Step 4: Adjust Docker Image Names
@@ -466,11 +473,12 @@ DOCKERHUB_ORG
 ```
 
 ### Workflow Customization Points
-1. Branch names (`on.push.branches`)
-2. Package names (`--packages-select`)
+1. **Package configuration** (`env.CPP_PACKAGES`, `env.PY_PACKAGES`) - **Start here!**
+2. Branch names (`on.push.branches`)
 3. Docker image names
 4. Badge branch names
 5. Docker Hub push conditions
+6. Coverage script packages ([`Docker/ci_cd_coverage.sh`](Docker/ci_cd_coverage.sh))
 
 ### Badge URLs Format
 ```
