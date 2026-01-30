@@ -51,6 +51,7 @@ fi
 
 # Check if --clean-rebuild is among the arguments
 BASE_IMAGE="osrf/ros:jazzy-desktop-full"
+TARGET_DISTRO="jazzy"
 REBUILD=false
 CPU_ONLY="false"
 for arg in "$@"; do

@@ -46,6 +46,9 @@ RUN apt-get update && apt-get install -y \
     nano \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade pip to ensure --break-system-packages flag is supported
+RUN pip3 install --upgrade pip
+
 # Install uv (fast Python package installer) via pip with system packages override
 RUN pip3 install --break-system-packages uv
 
