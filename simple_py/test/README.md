@@ -86,12 +86,17 @@ colcon test --packages-select simple_py --event-handlers console_direct+ --pytes
 
 ### Run specific test file
 ```bash
-colcon test --packages-select simple_py --pytest-args 'test/test_simple_torch_node.py -v'
+colcon test --packages-select simple_py \
+  --event-handlers console_direct+ \
+  --pytest-args test/test_simple_torch_node.py \
+  --pytest-args -v
 ```
 
 ### Run specific test function
 ```bash
-colcon test --packages-select simple_py --pytest-args 'test/test_simple_torch_node.py::TestSimpleTorchNode::test_compute_zero_tensor_1d -v'
+colcon test --packages-select simple_py --event-handlers console_direct+ \
+  --pytest-args test/test_simple_torch_node.py::TestSimpleTorchNode::test_compute_zero_tensor_1d \
+  --pytest-args -v
 ```
 
 ## Test Coverage
