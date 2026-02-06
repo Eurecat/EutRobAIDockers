@@ -44,11 +44,11 @@ jobs:
       
       - name: Verify image was built
         run: |
-          if docker images | grep -q "eut_ros_torch.*jazzy"; then
-            echo "✅ Image eut_ros_torch:jazzy successfully built"
-            docker images eut_ros_torch:jazzy
+          if docker images | grep -q "eut_ros_torch_cpu:jazzy"; then
+            echo "✅ Image eut_ros_torch_cpu:jazzy successfully built"
+            docker images eut_ros_torch_cpu:jazzy
           else
-            echo "❌ Image eut_ros_torch:jazzy not found"
+            echo "❌ Image eut_ros_torch_cpu:jazzy not found"
             echo "Available images:"
             docker images
             exit 1
