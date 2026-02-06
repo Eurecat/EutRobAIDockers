@@ -2,17 +2,19 @@
 # 
 # This Dockerfile creates a base image with:
 # - Configurable ROS 2 base (standard Jazzy or Vulcanexus Jazzy)
-# - PyTorch for deep learning capabilities
+# - PyTorch for deep learning capabilities (GPU or CPU)
 # - Development tools and utilities for robotics AI projects
 
 # Choose the base image at build time. Defaults to the second option.
 ARG BASE_IMAGE="osrf/ros:jazzy-desktop-full"
+ARG CPU_ONLY="false"
 
 # You can refer to ARGs in FROM (supported by modern Docker)
 FROM ${BASE_IMAGE} AS base
 
-# (Optional) re-declare the arg if you want to use it in later instructions
+# (Optional) re-declare the args if you want to use them in later instructions
 ARG BASE_IMAGE
+ARG CPU_ONLY
 
 # Set default user/group variables
 # ARG USER_NAME=coghri
@@ -49,11 +51,24 @@ RUN pip3 install --break-system-packages uv
 
 # # Install PyTorch and torchvision using uv with system packages override
 # Create a virtual environment for Python packages
-RUN uv venv /opt/ros_python_env --python 3.12.3
+RUN uv venv /opt/ros_python_env --python 3.12
 
 # Install requirements in the virtual environment
 COPY requirements.txt /tmp/requirements.txt
-RUN /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements.txt"
+
+# Use CPU or GPU requirements based on build arg
+RUN if [ "$CPU_ONLY" = "true" ]; then \
+        /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements.txt \
+          --index-url https://download.pytorch.org/whl/cpu \
+          --extra-index-url https://pypi.org/simple \
+          --index-strategy unsafe-best-match"; \
+    else \
+        /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements.txt"; \
+          # --index-url https://download.pytorch.org/whl/cu121 \
+          # --extra-index-url https://pypi.org/simple \
+          # --index-strategy unsafe-best-match"; \
+    fi
+
 
 # ####################################################################################################
 # # Binaries for .... (ros2 utilities, etc.)
@@ -77,7 +92,11 @@ WORKDIR /workspace/src
 WORKDIR /workspace
 
 # Optional: fix rosdep init issue gracefully
-RUN [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ] /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash;sudo rosdep init" || echo "rosdep already initialized"
+RUN if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
+      /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && rosdep init"; \
+    else \
+      echo "rosdep already initialized"; \
+    fi
 
 RUN apt-get update && \ 
     /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash;\

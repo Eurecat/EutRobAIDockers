@@ -81,6 +81,7 @@ colcon test-result --verbose
 
 ### Run with detailed output
 ```bash
+#colcon build before the next command
 colcon test --packages-select simple_py --event-handlers console_direct+ --pytest-args '-v'
 ```
 
@@ -88,15 +89,13 @@ colcon test --packages-select simple_py --event-handlers console_direct+ --pytes
 ```bash
 colcon test --packages-select simple_py \
   --event-handlers console_direct+ \
-  --pytest-args test/test_simple_torch_node.py \
-  --pytest-args -v
+  --pytest-args 'test/test_simple_torch_node.py -v'
 ```
 
 ### Run specific test function
 ```bash
 colcon test --packages-select simple_py --event-handlers console_direct+ \
-  --pytest-args test/test_simple_torch_node.py::TestSimpleTorchNode::test_compute_zero_tensor_1d \
-  --pytest-args -v
+  --pytest-args 'test/test_simple_torch_node.py::TestSimpleTorchNode::test_compute_zero_tensor_1d -v'
 ```
 
 ## Test Coverage

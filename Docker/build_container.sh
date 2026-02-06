@@ -3,7 +3,9 @@
 # Usage: 
 # - Standard ROS2 Jazzy: ./build_container.sh
 # - Vulcanexus Jazzy: ./build_container.sh --vulcanexus
-# - Clean rebuild: ./build_container.sh --clean-rebuild [--vulcanexus]
+# - CPU-only version: ./build_container.sh --cpu
+# - CPU-only Vulcanexus: ./build_container.sh --cpu --vulcanexus
+# - Clean rebuild: ./build_container.sh --clean-rebuild [--vulcanexus] [--cpu]
 
 export DOCKER_BUILDKIT=1
 
@@ -50,6 +52,7 @@ fi
 # Check if --clean-rebuild is among the arguments
 BASE_IMAGE="osrf/ros:jazzy-desktop-full"
 REBUILD=false
+CPU_ONLY="false"
 for arg in "$@"; do
     if [ "$arg" == "--clean-rebuild" ]; then
         REBUILD=true
@@ -57,30 +60,44 @@ for arg in "$@"; do
     if [ "$arg" == "--vulcanexus" ]; then
         BASE_IMAGE="eprosima/vulcanexus:jazzy-desktop"
     fi
+    if [ "$arg" == "--cpu" ]; then
+        CPU_ONLY="true"
+    fi
 done
 
 if $REBUILD; then # remove all files just in case some modifications have been made and git pull does not work
     echo "Rebuilding: cleaning up dependencies..."
 fi
 
-# Set image name based on the base image choice
+# Set image name based on the base image choice and CPU flag
 TARGET_DISTRO="jazzy"
 if [[ "${BASE_IMAGE}" == *"vulcanexus"* ]]; then
-    IMAGE_NAME="eut_ros_vulcanexus_torch:${TARGET_DISTRO}"
-    echo "Building with Vulcanexus Jazzy base image..."
+    if [ "$CPU_ONLY" = "true" ]; then
+        IMAGE_NAME="eut_ros_vulcanexus_torch_cpu:${TARGET_DISTRO}"
+        echo "Building with Vulcanexus Jazzy CPU-only base image..."
+    else
+        IMAGE_NAME="eut_ros_vulcanexus_torch:${TARGET_DISTRO}"
+        echo "Building with Vulcanexus Jazzy base image..."
+    fi
 else
-    IMAGE_NAME="eut_ros_torch:${TARGET_DISTRO}"
-    echo "Building with standard ROS2 Jazzy base image..."
+    if [ "$CPU_ONLY" = "true" ]; then
+        IMAGE_NAME="eut_ros_torch_cpu:${TARGET_DISTRO}"
+        echo "Building with standard ROS2 Jazzy CPU-only base image..."
+    else
+        IMAGE_NAME="eut_ros_torch:${TARGET_DISTRO}"
+        echo "Building with standard ROS2 Jazzy base image..."
+    fi
 fi
 
 echo "Base image: ${BASE_IMAGE}"
+echo "CPU Only: ${CPU_ONLY}"
 echo "Output image: ${IMAGE_NAME}"
 
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
-    docker build --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
+    docker build --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg CPU_ONLY="${CPU_ONLY}" -t ${IMAGE_NAME} -f Dockerfile
 else
-    docker build . --build-arg BASE_IMAGE="${BASE_IMAGE}" -t ${IMAGE_NAME} -f Dockerfile
+    docker build . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg CPU_ONLY="${CPU_ONLY}" -t ${IMAGE_NAME} -f Dockerfile
 fi
 
 # Set or Update TARGET_DISTRO 

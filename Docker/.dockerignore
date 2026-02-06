@@ -1,0 +1,49 @@
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+docs/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts and cache
+build/
+install/
+log/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+.cache/
+.pytest_cache/
+
+# Docker files (avoid recursive copying)
+Dockerfile*
+docker-compose*.yml
+docker-compose*.yaml
+.dockerignore
+
+# Environment files (except the one we need)
+.env*
+!.env
+
+# Temporary and log files
+*.tmp
+*.log
+logs/
+
+# Development containers
+DevContainer/
