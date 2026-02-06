@@ -38,7 +38,7 @@ jobs:
         run: chmod +x Docker/build_container.sh
       
       - name: Build Docker image with SSH
-        run: cd ./Docker && ./build_container.sh
+        run: cd ./Docker && ./build_container.sh --cpu
         env:
           DOCKER_BUILDKIT: 1
       
