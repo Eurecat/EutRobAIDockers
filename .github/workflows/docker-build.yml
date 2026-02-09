@@ -15,10 +15,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: "vulcanexus"
+            build_flags: "--vulcanexus --cpu"
+            image_name: "eut_ros_vulcanexus_torch_cpu"
+          - variant: "standard"
+            build_flags: "--cpu"
+            image_name: "eut_ros_torch_cpu"
+    
     env:
       # Package Configuration - Define your ROS2 packages here
       CPP_PACKAGES: "simple_cpp"
       PY_PACKAGES: "simple_py"
+      # Matrix-specific image name
+      IMAGE_NAME: "${{ matrix.image_name }}"
+      VARIANT: "${{ matrix.variant }}"
     
     steps:
       - name: Checkout repository
@@ -37,18 +51,18 @@ jobs:
       - name: Make build script executable
         run: chmod +x Docker/build_container.sh
       
-      - name: Build Docker image with SSH
-        run: cd ./Docker && ./build_container.sh --cpu
+      - name: Build Docker image (${{ matrix.variant }})
+        run: cd ./Docker && ./build_container.sh ${{ matrix.build_flags }}
         env:
           DOCKER_BUILDKIT: 1
       
       - name: Verify image was built
         run: |
-          if docker images | grep -q "eut_ros_torch_cpu.*jazzy"; then
-            echo "✅ Image eut_ros_torch_cpu:jazzy successfully built"
-            docker images eut_ros_torch_cpu:jazzy
+          if docker images | grep -q "${{ matrix.image_name }}.*jazzy"; then
+            echo "✅ Image ${{ matrix.image_name }}:jazzy successfully built"
+            docker images ${{ matrix.image_name }}:jazzy
           else
-            echo "❌ Image eut_ros_torch_cpu:jazzy not found"
+            echo "❌ Image ${{ matrix.image_name }}:jazzy not found"
             echo "Available images:"
             docker images
             exit 1
@@ -113,7 +127,7 @@ jobs:
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: ROS 2 Tests
+          name: ROS 2 Tests (${{ matrix.variant }})
           path: 'build/*/test_results/**/*.xml,build/*/pytest.xml'
           reporter: java-junit
           fail-on-error: false
@@ -123,7 +137,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.variant }}
           path: |
             build/*/test_results/**/*.xml
             build/*/pytest.xml
@@ -169,7 +183,7 @@ jobs:
         if: always() && github.ref == 'refs/heads/jazzy'
         uses: actions/upload-artifact@v4
         with:
-          name: test-badge
+          name: test-badge-${{ matrix.variant }}
           path: test-badge.json
       
 
@@ -245,7 +259,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-reports
+          name: coverage-reports-${{ matrix.variant }}
           path: |
             */htmlcov/**
             build/*/coverage_html/**
@@ -354,7 +368,7 @@ jobs:
         if: always() && github.ref == 'refs/heads/jazzy'
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-badge
+          name: coverage-badge-${{ matrix.variant }}
           path: coverage-badge.json
       
       # Publish badges to badges branch for shields.io endpoint
@@ -378,15 +392,15 @@ jobs:
           
           # Clean working directory and create structure
           git rm -rf . 2>/dev/null || true
-          mkdir -p ${BRANCH_NAME}
+          mkdir -p ${BRANCH_NAME}/${{ matrix.variant }}
           
           # Copy badge files
-          cp ${{ github.workspace }}/test-badge.json ${BRANCH_NAME}/ 2>/dev/null || echo "No test badge"
-          cp ${{ github.workspace }}/coverage-badge.json ${BRANCH_NAME}/ 2>/dev/null || echo "No coverage badge"
+          cp ${{ github.workspace }}/test-badge.json ${BRANCH_NAME}/${{ matrix.variant }}/ 2>/dev/null || echo "No test badge"
+          cp ${{ github.workspace }}/coverage-badge.json ${BRANCH_NAME}/${{ matrix.variant }}/ 2>/dev/null || echo "No coverage badge"
           
           # Add, commit and push
           git add ${BRANCH_NAME}/
-          git diff --staged --quiet || git commit -m "Update badges for ${BRANCH_NAME} [skip ci]"
+          git diff --staged --quiet || git commit -m "Update badges for ${BRANCH_NAME}/${{ matrix.variant }} [skip ci]"
           git push origin badges 2>/dev/null || git push --set-upstream origin badges
 
       - name: Log in to Docker Hub
@@ -403,13 +417,14 @@ jobs:
           DOCKERHUB_ORG=${{ secrets.DOCKERHUB_ORG }}
           
           # Tag the local image with Docker Hub organization name
-          docker tag ${BUILT_IMAGE} ${DOCKERHUB_ORG}/eutrobai:${TARGET_DISTRO}
+          docker tag ${BUILT_IMAGE} ${DOCKERHUB_ORG}/${{ matrix.image_name }}:${TARGET_DISTRO}
       
       - name: Push to Docker Hub
-        if: github.ref == 'none' # IGNORE for now the push, replace it with main branch or jazzy when ready to publish from protected branch
+        # if: github.ref == 'none' # IGNORE for now the push, replace it with main branch or jazzy when ready to publish from protected branch
+        if: github.ref == 'refs/heads/jazzy' # IGNORE for now the push, replace it with main branch or jazzy when ready to publish from protected branch
         run: |
           source Docker/.env
           DOCKERHUB_ORG=${{ secrets.DOCKERHUB_ORG }}
           
           # Push the image to Docker Hub
-          docker push ${DOCKERHUB_ORG}/eutrobai:${TARGET_DISTRO}
+          docker push ${DOCKERHUB_ORG}/${{ matrix.image_name }}:${TARGET_DISTRO}
