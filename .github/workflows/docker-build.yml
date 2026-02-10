@@ -393,10 +393,17 @@ jobs:
           # Clean working directory and create structure
           git rm -rf . 2>/dev/null || true
           mkdir -p ${BRANCH_NAME}/${{ matrix.variant }}
+          mkdir -p ${BRANCH_NAME}
           
-          # Copy badge files
+          # Copy badge files to variant-specific directory
           cp ${{ github.workspace }}/test-badge.json ${BRANCH_NAME}/${{ matrix.variant }}/ 2>/dev/null || echo "No test badge"
           cp ${{ github.workspace }}/coverage-badge.json ${BRANCH_NAME}/${{ matrix.variant }}/ 2>/dev/null || echo "No coverage badge"
+          
+          # Also copy to root directory for backward compatibility (use standard variant as default)
+          if [ "${{ matrix.variant }}" == "standard" ]; then
+            cp ${{ github.workspace }}/test-badge.json ${BRANCH_NAME}/ 2>/dev/null || echo "No test badge"
+            cp ${{ github.workspace }}/coverage-badge.json ${BRANCH_NAME}/ 2>/dev/null || echo "No coverage badge"
+          fi
           
           # Add, commit and push
           git add ${BRANCH_NAME}/
