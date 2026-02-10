@@ -11,6 +11,11 @@ on:
       - jazzy
   workflow_dispatch:
 
+permissions:
+  contents: write
+  checks: write
+  pull-requests: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -387,28 +392,63 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Fetch and checkout badges branch (create if doesn't exist)
-          git fetch origin badges 2>/dev/null || true
-          git checkout badges 2>/dev/null || git checkout --orphan badges
+          echo "🔍 Fetching badges branch..."
+          git fetch origin badges || echo "⚠️ No remote badges branch found, will create new one"
+          
+          if git checkout badges; then
+            echo "✅ Checked out existing badges branch"
+          else
+            echo "📝 Creating new orphan badges branch"
+            git checkout --orphan badges
+          fi
           
           # Clean working directory and create structure
-          git rm -rf . 2>/dev/null || true
+          git rm -rf . || true
           mkdir -p ${BRANCH_NAME}/${{ matrix.variant }}
           mkdir -p ${BRANCH_NAME}
           
           # Copy badge files to variant-specific directory
-          cp ${{ github.workspace }}/test-badge.json ${BRANCH_NAME}/${{ matrix.variant }}/ 2>/dev/null || echo "No test badge"
-          cp ${{ github.workspace }}/coverage-badge.json ${BRANCH_NAME}/${{ matrix.variant }}/ 2>/dev/null || echo "No coverage badge"
+          if [ -f "${{ github.workspace }}/test-badge.json" ]; then
+            cp ${{ github.workspace }}/test-badge.json ${BRANCH_NAME}/${{ matrix.variant }}/
+            echo "✅ Copied test badge to ${BRANCH_NAME}/${{ matrix.variant }}/"
+          fi
+          
+          if [ -f "${{ github.workspace }}/coverage-badge.json" ]; then
+            cp ${{ github.workspace }}/coverage-badge.json ${BRANCH_NAME}/${{ matrix.variant }}/
+            echo "✅ Copied coverage badge to ${BRANCH_NAME}/${{ matrix.variant }}/"
+          fi
           
           # Also copy to root directory for backward compatibility (use standard variant as default)
           if [ "${{ matrix.variant }}" == "standard" ]; then
-            cp ${{ github.workspace }}/test-badge.json ${BRANCH_NAME}/ 2>/dev/null || echo "No test badge"
-            cp ${{ github.workspace }}/coverage-badge.json ${BRANCH_NAME}/ 2>/dev/null || echo "No coverage badge"
+            if [ -f "${{ github.workspace }}/test-badge.json" ]; then
+              cp ${{ github.workspace }}/test-badge.json ${BRANCH_NAME}/
+              echo "✅ Copied test badge to ${BRANCH_NAME}/ (backward compatibility)"
+            fi
+            
+            if [ -f "${{ github.workspace }}/coverage-badge.json" ]; then
+              cp ${{ github.workspace }}/coverage-badge.json ${BRANCH_NAME}/
+              echo "✅ Copied coverage badge to ${BRANCH_NAME}/ (backward compatibility)"
+            fi
           fi
           
           # Add, commit and push
           git add ${BRANCH_NAME}/
-          git diff --staged --quiet || git commit -m "Update badges for ${BRANCH_NAME}/${{ matrix.variant }} [skip ci]"
-          git push origin badges 2>/dev/null || git push --set-upstream origin badges
+          
+          if git diff --staged --quiet; then
+            echo "⚠️ No changes to commit"
+          else
+            echo "📝 Committing badge updates..."
+            git commit -m "Update badges for ${BRANCH_NAME}/${{ matrix.variant }} [skip ci]"
+            
+            echo "🚀 Pushing to badges branch..."
+            if git push origin badges; then
+              echo "✅ Successfully pushed badges to origin/badges"
+            else
+              echo "⚠️ First push failed, trying with --set-upstream..."
+              git push --set-upstream origin badges
+              echo "✅ Successfully pushed badges with --set-upstream"
+            fi
+          fi
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3

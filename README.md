@@ -1,8 +1,14 @@
 # EutRobAI Docker Base Images
 
 [![Build Status](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml/badge.svg?branch=jazzy)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml?query=branch%3Ajazzy)
-[![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/test-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/coverage-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
+
+**Standard ROS 2:**
+[![Tests (Standard)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/standard/test-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
+[![Coverage (Standard)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/standard/coverage-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
+
+**Vulcanexus:**
+[![Tests (Vulcanexus)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/vulcanexus/test-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
+[![Coverage (Vulcanexus)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Eurecat/EutRobAIDockers/badges/jazzy/vulcanexus/coverage-badge.json)](https://github.com/Eurecat/EutRobAIDockers/actions/workflows/docker-build.yml)
 
 ## What This Repository Does
 
