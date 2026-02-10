@@ -397,13 +397,14 @@ jobs:
           
           if git checkout badges; then
             echo "✅ Checked out existing badges branch"
+            # Pull latest to avoid conflicts
+            git pull origin badges || true
           else
             echo "📝 Creating new orphan badges branch"
             git checkout --orphan badges
           fi
           
-          # Clean working directory and create structure
-          git rm -rf . || true
+          # Create directory structure (don't remove existing files!)
           mkdir -p ${BRANCH_NAME}/${{ matrix.variant }}
           mkdir -p ${BRANCH_NAME}
           
