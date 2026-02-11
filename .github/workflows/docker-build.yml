@@ -271,6 +271,119 @@ jobs:
             coverage_summary.txt
             coverage-*.xml
       
+      # Update README with actual test and coverage values
+      - name: Update README with badge values
+        if: always() && github.ref == 'refs/heads/jazzy'
+        run: |
+          # Parse test results
+          if [ -f test_summary.txt ]; then
+            SUMMARY_LINE=$(grep "^Summary:" test_summary.txt)
+            TOTAL=$(echo "$SUMMARY_LINE" | grep -oP '\d+(?= tests)' || echo "0")
+            FAILURES=$(echo "$SUMMARY_LINE" | grep -oP '\d+(?= failures)' || echo "0")
+            ERRORS=$(echo "$SUMMARY_LINE" | grep -oP '\d+(?= errors)' || echo "0")
+            PASSED=$((TOTAL - FAILURES - ERRORS))
+            FAILED=$((FAILURES + ERRORS))
+          else
+            PASSED=0
+            FAILED=0
+          fi
+          
+          echo "📊 Test Results: $PASSED/$TOTAL passed, $FAILED failed"
+          
+          # Extract Python coverage percentage
+          PY_TOTAL_LINES_HIT=0
+          PY_TOTAL_LINES_FOUND=0
+          
+          for pkg in ${{ env.PY_PACKAGES }}; do
+            if [ -f "build/${pkg}/coverage.lcov" ]; then
+              PKG_LINES_HIT=$(grep -E "^LH:" "build/${pkg}/coverage.lcov" | cut -d: -f2 | awk '{s+=$1} END {print s}')
+              PKG_LINES_FOUND=$(grep -E "^LF:" "build/${pkg}/coverage.lcov" | cut -d: -f2 | awk '{s+=$1} END {print s}')
+              PY_TOTAL_LINES_HIT=$((PY_TOTAL_LINES_HIT + PKG_LINES_HIT))
+              PY_TOTAL_LINES_FOUND=$((PY_TOTAL_LINES_FOUND + PKG_LINES_FOUND))
+            fi
+          done
+          
+          if [ "$PY_TOTAL_LINES_FOUND" -gt 0 ]; then
+            PY_COV_PCT=$(awk "BEGIN {printf \"%.0f\", ($PY_TOTAL_LINES_HIT/$PY_TOTAL_LINES_FOUND)*100}")
+          else
+            PY_COV_PCT=0
+          fi
+          
+          # Extract C++ coverage percentage
+          CPP_TOTAL_LINES_HIT=0
+          CPP_TOTAL_LINES_FOUND=0
+          
+          source Docker/.env
+          for pkg in ${{ env.CPP_PACKAGES }}; do
+            if [ -f "build/${pkg}/coverage_filtered.info" ]; then
+              PKG_COV_DATA=$(docker run --rm --entrypoint="" \
+                -v ${{ github.workspace }}:/workspace \
+                -w /workspace \
+                ${BUILT_IMAGE} \
+                bash -c "lcov --summary build/${pkg}/coverage_filtered.info 2>&1 | grep 'lines' || echo 'lines......: 0.0%'")
+              
+              PKG_LINES=$(echo "$PKG_COV_DATA" | grep -oP '\d+ of \d+' || echo '0 of 0')
+              PKG_LINES_HIT=$(echo "$PKG_LINES" | cut -d' ' -f1)
+              PKG_LINES_FOUND=$(echo "$PKG_LINES" | cut -d' ' -f3)
+              
+              CPP_TOTAL_LINES_HIT=$((CPP_TOTAL_LINES_HIT + PKG_LINES_HIT))
+              CPP_TOTAL_LINES_FOUND=$((CPP_TOTAL_LINES_FOUND + PKG_LINES_FOUND))
+            fi
+          done
+          
+          if [ "$CPP_TOTAL_LINES_FOUND" -gt 0 ]; then
+            CPP_COV_PCT=$(awk "BEGIN {printf \"%.0f\", ($CPP_TOTAL_LINES_HIT/$CPP_TOTAL_LINES_FOUND)*100}")
+          else
+            CPP_COV_PCT=0
+          fi
+          
+          AVG_COV=$(( (PY_COV_PCT + CPP_COV_PCT) / 2 ))
+          
+          echo "📊 Coverage: Python ${PY_COV_PCT}%, C++ ${CPP_COV_PCT}%, Average ${AVG_COV}%"
+          
+          # Update README badges with actual values
+          echo "🔄 Updating README with badge values..."
+          
+          # Store values for later use
+          echo "TESTS_PASSED=$PASSED" >> $GITHUB_ENV
+          echo "TESTS_TOTAL=$TOTAL" >> $GITHUB_ENV
+          echo "TESTS_FAILED=$FAILED" >> $GITHUB_ENV
+          echo "COVERAGE_PCT=$AVG_COV" >> $GITHUB_ENV
+          
+          # Replace badges in README
+          sed -i "s/\[Tests (Standard)\](https:\/\/img.shields.io\/badge\/tests-passing-brightgreen)/[Tests (Standard)](https:\/\/img.shields.io\/badge\/tests-$PASSED%2F$TOTAL%20passed-brightgreen)/g" README.md
+          sed -i "s/\[Coverage (Standard)\](https:\/\/img.shields.io\/badge\/coverage-pending-blue)/[Coverage (Standard)](https:\/\/img.shields.io\/badge\/coverage-$AVG_COV%25-yellow)/g" README.md
+          sed -i "s/\[Tests (Vulcanexus)\](https:\/\/img.shields.io\/badge\/tests-passing-brightgreen)/[Tests (Vulcanexus)](https:\/\/img.shields.io\/badge\/tests-$PASSED%2F$TOTAL%20passed-brightgreen)/g" README.md
+          sed -i "s/\[Coverage (Vulcanexus)\](https:\/\/img.shields.io\/badge\/coverage-pending-blue)/[Coverage (Vulcanexus)](https:\/\/img.shields.io\/badge\/coverage-$AVG_COV%25-yellow)/g" README.md
+          
+          echo "✅ README badges updated"
+      
+      # Commit updated README
+      - name: Commit updated README with badge changes
+        if: always() && github.ref == 'refs/heads/jazzy'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Check if there are any changes
+          if git diff --quiet README.md; then
+            echo "⚠️ No README changes to commit"
+          else
+            echo "📝 Committing README badge updates..."
+            git add README.md
+            git commit -m "Update badges: tests and coverage [skip ci]"
+            
+            # Pull before push to avoid conflicts
+            git pull origin jazzy --rebase || true
+            
+            # Push the changes
+            if git push origin jazzy; then
+              echo "✅ Successfully pushed README updates"
+            else
+              echo "⚠️ Push failed, skipping (may have conflicts)"
+            fi
+          fi
+      
       # Create coverage badge (for README)
       - name: Create coverage badge
         if: always() && github.ref == 'refs/heads/jazzy'
