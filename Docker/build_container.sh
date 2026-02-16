@@ -1,11 +1,70 @@
 #!/usr/bin/env bash
 #
-# Usage: 
-# - Standard ROS2 Jazzy: ./build_container.sh
-# - Vulcanexus Jazzy: ./build_container.sh --vulcanexus
-# - CPU-only version: ./build_container.sh --cpu
-# - CPU-only Vulcanexus: ./build_container.sh --cpu --vulcanexus
-# - Clean rebuild: ./build_container.sh --clean-rebuild [--vulcanexus] [--cpu]
+# EutRobAI Docker Build Script
+# Build configurable ROS2 Docker images with PyTorch support
+
+# Function to display help
+show_help() {
+    cat << EOF
+Usage: ./build_container.sh [OPTIONS]
+
+Build EutRobAI Docker images with configurable ROS2 distributions and hardware support.
+
+OPTIONS:
+    --humble            Build for ROS2 Humble (Ubuntu 22.04, Python 3.10)
+                        Default: ROS2 Jazzy (Ubuntu 24.04, Python 3.12)
+    
+    --vulcanexus        Use Vulcanexus Jazzy base image instead of standard ROS2
+                        Note: Only compatible with Jazzy (cannot be used with --humble)
+    
+    --cpu               Build CPU-only version (no GPU support)
+                        Default: GPU-enabled build with CUDA support
+    
+    --clean-rebuild     Force a clean rebuild without using Docker cache
+    
+    --help, -h          Display this help message
+
+EXAMPLES:
+    # Standard ROS2 Jazzy with GPU support (default)
+    ./build_container.sh
+
+    # ROS2 Humble with GPU support
+    ./build_container.sh --humble
+
+    # ROS2 Jazzy CPU-only
+    ./build_container.sh --cpu
+
+    # Vulcanexus Jazzy with GPU support
+    ./build_container.sh --vulcanexus
+
+    # ROS2 Humble CPU-only with clean rebuild
+    ./build_container.sh --humble --cpu --clean-rebuild
+
+GENERATED IMAGES:
+    Jazzy GPU:           eut_ros_torch:jazzy
+    Jazzy CPU:           eut_ros_torch_cpu:jazzy
+    Humble GPU:          eut_ros_torch:humble
+    Humble CPU:          eut_ros_torch_cpu:humble
+    Vulcanexus Jazzy GPU: eut_ros_vulcanexus_torch:jazzy
+    Vulcanexus Jazzy CPU: eut_ros_vulcanexus_torch_cpu:jazzy
+
+ENVIRONMENT:
+    The script creates/updates a .env file with:
+    - USERNAME, USER_ID, GROUP_ID
+    - ROS_DOMAIN_ID
+    - TARGET_DISTRO, BUILT_IMAGE
+    - DOCKER_RUNTIME (nvidia for GPU, runc for CPU)
+
+EOF
+    exit 0
+}
+
+# Check for help flag first
+for arg in "$@"; do
+    if [ "$arg" == "--help" ] || [ "$arg" == "-h" ]; then
+        show_help
+    fi
+done
 
 export DOCKER_BUILDKIT=1
 
@@ -49,11 +108,15 @@ else
 fi
 # --- END: Manage .env file ---
 
-# Check if --clean-rebuild is among the arguments
+# Initialize flags and variables
 BASE_IMAGE="osrf/ros:jazzy-desktop-full"
 TARGET_DISTRO="jazzy"
 REBUILD=false
+USE_VULCANEXUS=false
+USE_HUMBLE=false
 CPU_ONLY="false"
+
+# Parse command line arguments
 for arg in "$@"; do
     if [ "$arg" == "--clean-rebuild" ]; then
         REBUILD=true
@@ -61,6 +124,11 @@ for arg in "$@"; do
     if [ "$arg" == "--vulcanexus" ]; then
         USE_VULCANEXUS=true
         BASE_IMAGE="eprosima/vulcanexus:jazzy-desktop"
+    fi
+    if [ "$arg" == "--humble" ]; then
+        USE_HUMBLE=true
+        BASE_IMAGE="osrf/ros:humble-desktop-full"
+        TARGET_DISTRO="humble"
     fi
     if [ "$arg" == "--cpu" ]; then
         CPU_ONLY="true"
@@ -78,23 +146,29 @@ if $REBUILD; then # remove all files just in case some modifications have been m
     echo "Rebuilding: cleaning up dependencies..."
 fi
 
+# Set Python version based on ROS distribution
+if [ "${TARGET_DISTRO}" == "humble" ]; then
+    PYTHON_VERSION="3.10"
+else
+    PYTHON_VERSION="3.12"
+fi
+
 # Set image name based on the base image choice and CPU flag
-TARGET_DISTRO="jazzy"
 if [[ "${BASE_IMAGE}" == *"vulcanexus"* ]]; then
     if [ "$CPU_ONLY" = "true" ]; then
         IMAGE_NAME="eut_ros_vulcanexus_torch_cpu:${TARGET_DISTRO}"
-        echo "Building with Vulcanexus Jazzy CPU-only base image..."
+        echo "Building with Vulcanexus ${TARGET_DISTRO} CPU-only base image..."
     else
         IMAGE_NAME="eut_ros_vulcanexus_torch:${TARGET_DISTRO}"
-        echo "Building with Vulcanexus Jazzy base image..."
+        echo "Building with Vulcanexus ${TARGET_DISTRO} base image..."
     fi
 else
     if [ "$CPU_ONLY" = "true" ]; then
         IMAGE_NAME="eut_ros_torch_cpu:${TARGET_DISTRO}"
-        echo "Building with standard ROS2 Jazzy CPU-only base image..."
+        echo "Building with standard ROS2 ${TARGET_DISTRO} CPU-only base image..."
     else
         IMAGE_NAME="eut_ros_torch:${TARGET_DISTRO}"
-        echo "Building with standard ROS2 Jazzy base image..."
+        echo "Building with standard ROS2 ${TARGET_DISTRO} base image..."
     fi
 fi
 
@@ -105,9 +179,9 @@ echo "Python version: ${PYTHON_VERSION}"
 
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
-    docker build --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg CPU_ONLY="${CPU_ONLY}" -t ${IMAGE_NAME} -f Dockerfile
+    docker build --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" -t ${IMAGE_NAME} -f Dockerfile
 else
-    docker build . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg CPU_ONLY="${CPU_ONLY}" -t ${IMAGE_NAME} -f Dockerfile
+    docker build . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" -t ${IMAGE_NAME} -f Dockerfile
 fi
 
 # Set or Update TARGET_DISTRO 
