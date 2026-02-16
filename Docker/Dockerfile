@@ -5,7 +5,7 @@
 # - PyTorch for deep learning capabilities (GPU or CPU)
 # - Development tools and utilities for robotics AI projects
 
-# Choose the base image at build time. Defaults to the second option.
+# Choose the base image at build time. Defaults to Jazzy.
 ARG BASE_IMAGE="osrf/ros:jazzy-desktop-full"
 ARG CPU_ONLY="false"
 
