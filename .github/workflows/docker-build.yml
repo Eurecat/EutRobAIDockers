@@ -3,12 +3,10 @@ name: Build, Test & Push Docker Image
 on:
   push:
     branches:
-      # - main
-      - jazzy
+      - main
   pull_request:
     branches:
-      # - main
-      - jazzy
+      - main
   workflow_dispatch:
 
 permissions:
@@ -151,7 +149,7 @@ jobs:
       
       # Create test badge (for README)
       - name: Create test badge
-        if: always() && github.ref == 'refs/heads/jazzy'
+        if: always() && github.ref == 'refs/heads/main'
         run: |
           # Parse the summary line from test_summary.txt
           # Example line: "Summary: 55 tests, 0 errors, 0 failures, 6 skipped"
@@ -185,7 +183,7 @@ jobs:
           cat test-badge.json
 
       - name: Upload badge data
-        if: always() && github.ref == 'refs/heads/jazzy'
+        if: always() && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: test-badge-${{ matrix.variant }}
@@ -273,7 +271,7 @@ jobs:
       
       # Create coverage badge (for README)
       - name: Create coverage badge
-        if: always() && github.ref == 'refs/heads/jazzy'
+        if: always() && github.ref == 'refs/heads/main'
         run: |
           # Extract Python coverage percentage from lcov file
           echo "🔍 Searching for Python coverage files..."
@@ -370,7 +368,7 @@ jobs:
           cat coverage-badge.json
 
       - name: Upload coverage badge data
-        if: always() && github.ref == 'refs/heads/jazzy'
+        if: always() && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-badge-${{ matrix.variant }}
@@ -378,7 +376,7 @@ jobs:
       
       # Publish badges to badges branch for shields.io endpoint
       - name: Publish badges to badges branch
-        if: always() && github.ref == 'refs/heads/jazzy'
+        if: always() && github.ref == 'refs/heads/main'
         run: |
           # Determine branch name for badge directory
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
@@ -458,7 +456,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Tag image for Docker Hub
-        if: github.ref == 'refs/heads/jazzy'
+        if: github.ref == 'refs/heads/main'
         run: |
           # Get the image name from .env file
           source Docker/.env
@@ -468,8 +466,8 @@ jobs:
           docker tag ${BUILT_IMAGE} ${DOCKERHUB_ORG}/${{ matrix.image_name }}:${TARGET_DISTRO}
       
       - name: Push to Docker Hub
-        if: github.ref == 'none' # IGNORE for now the push, replace it with main branch or jazzy when ready to publish from protected branch
-        # if: github.ref == 'refs/heads/jazzy' # IGNORE for now the push, replace it with main branch or jazzy when ready to publish from protected branch
+        if: github.ref == 'none' # IGNORE for now the push, replace it with main branch or main when ready to publish from protected branch
+        # if: github.ref == 'refs/heads/main' # IGNORE for now the push, replace it with main branch or main when ready to publish from protected branch
         run: |
           source Docker/.env
           DOCKERHUB_ORG=${{ secrets.DOCKERHUB_ORG }}
