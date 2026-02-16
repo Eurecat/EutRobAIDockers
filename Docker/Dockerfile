@@ -16,6 +16,9 @@ FROM ${BASE_IMAGE} AS base
 ARG BASE_IMAGE
 ARG CPU_ONLY
 
+# Python version to use (3.10 for Humble/Ubuntu 22.04, 3.12 for Jazzy/Ubuntu 24.04)
+ARG PYTHON_VERSION="3.12"
+
 # Set default user/group variables
 # ARG USER_NAME=coghri
 # ARG GROUP_NAME=coghri-devs
@@ -48,15 +51,18 @@ RUN apt-get update && apt-get install -y \
     nano \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip to ensure --break-system-packages flag is supported
-RUN pip3 install --upgrade pip
+# Upgrade pip to ensure --break-system-packages flag is supported (only needed for Humble)
+ARG PYTHON_VERSION
+RUN if [ "${PYTHON_VERSION}" = "3.10" ]; then \
+        pip3 install --upgrade pip; \
+    fi
 
 # Install uv (fast Python package installer) via pip with system packages override
 RUN pip3 install --break-system-packages uv
 
 # # Install PyTorch and torchvision using uv with system packages override
 # Create a virtual environment for Python packages
-RUN uv venv /opt/ros_python_env --python 3.12
+RUN uv venv /opt/ros_python_env --python ${PYTHON_VERSION}
 
 # Install requirements in the virtual environment
 COPY requirements.txt /tmp/requirements.txt
