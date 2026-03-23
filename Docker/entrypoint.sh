@@ -18,7 +18,7 @@ fi
 echo "Building ros2 packages of this repo..."
 cd /workspace
 colcon build --symlink-install --event-handlers console_direct+ 
-
+    
 # Source the updated workspace after building
 if [ -f "/workspace/install/setup.bash" ]; then
     echo "Sourcing updated workspace environment..."
