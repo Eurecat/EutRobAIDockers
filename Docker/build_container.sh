@@ -14,8 +14,8 @@ OPTIONS:
     --humble            Build for ROS2 Humble (Ubuntu 22.04, Python 3.10)
                         Default: ROS2 Jazzy (Ubuntu 24.04, Python 3.12)
     
-    --vulcanexus        Use Vulcanexus Jazzy base image instead of standard ROS2
-                        Note: Only compatible with Jazzy (cannot be used with --humble)
+    --vulcanexus        Use Vulcanexus base image instead of standard ROS2
+                        Default: Vulcanexus Jazzy; with --humble uses Vulcanexus Humble
     
     --cpu               Build CPU-only version (no GPU support)
                         Default: GPU-enabled build with CUDA support
@@ -37,6 +37,9 @@ EXAMPLES:
     # Vulcanexus Jazzy with GPU support
     ./build_container.sh --vulcanexus
 
+    # Vulcanexus Humble with GPU support
+    ./build_container.sh --humble --vulcanexus
+
     # ROS2 Humble CPU-only with clean rebuild
     ./build_container.sh --humble --cpu --clean-rebuild
 
@@ -47,6 +50,8 @@ GENERATED IMAGES:
     Humble CPU:          eut_ros_torch_cpu:humble
     Vulcanexus Jazzy GPU: eut_ros_vulcanexus_torch:jazzy
     Vulcanexus Jazzy CPU: eut_ros_vulcanexus_torch_cpu:jazzy
+    Vulcanexus Humble GPU: eut_ros_vulcanexus_torch:humble
+    Vulcanexus Humble CPU: eut_ros_vulcanexus_torch_cpu:humble
 
 ENVIRONMENT:
     The script creates/updates a .env file with:
@@ -123,11 +128,9 @@ for arg in "$@"; do
     fi
     if [ "$arg" == "--vulcanexus" ]; then
         USE_VULCANEXUS=true
-        BASE_IMAGE="eprosima/vulcanexus:jazzy-desktop"
     fi
     if [ "$arg" == "--humble" ]; then
         USE_HUMBLE=true
-        BASE_IMAGE="osrf/ros:humble-desktop-full"
         TARGET_DISTRO="humble"
     fi
     if [ "$arg" == "--cpu" ]; then
@@ -135,11 +138,19 @@ for arg in "$@"; do
     fi
 done
 
-# Validate that Vulcanexus and Humble are not used together
-if $USE_VULCANEXUS && $USE_HUMBLE; then
-    echo "ERROR: --vulcanexus and --humble cannot be used together."
-    echo "Vulcanexus is only available for Jazzy."
-    exit 1
+# Resolve base image from selected flags
+if $USE_VULCANEXUS; then
+    if $USE_HUMBLE; then
+        BASE_IMAGE="eprosima/vulcanexus:humble-desktop"
+    else
+        BASE_IMAGE="eprosima/vulcanexus:jazzy-desktop"
+    fi
+else
+    if $USE_HUMBLE; then
+        BASE_IMAGE="osrf/ros:humble-desktop-full"
+    else
+        BASE_IMAGE="osrf/ros:jazzy-desktop-full"
+    fi
 fi
 
 if $REBUILD; then # remove all files just in case some modifications have been made and git pull does not work
