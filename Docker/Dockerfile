@@ -1,4 +1,4 @@
-# EutRobAI Base Image: Configurable ROS2 + PyTorch
+# EutRobAI Base Image: Configurable ROS2 + PyTorch for x86_64
 # 
 # This Dockerfile creates a base image with:
 # - Configurable ROS 2 base (standard Jazzy or Vulcanexus Jazzy)
@@ -8,13 +8,14 @@
 # Choose the base image at build time. Defaults to Jazzy.
 ARG BASE_IMAGE="osrf/ros:jazzy-desktop-full"
 ARG CPU_ONLY="false"
+ARG PLATFORM_ARCH="amd"
 
-# You can refer to ARGs in FROM (supported by modern Docker)
 FROM ${BASE_IMAGE} AS base
 
 # (Optional) re-declare the args if you want to use them in later instructions
 ARG BASE_IMAGE
 ARG CPU_ONLY
+ARG PLATFORM_ARCH
 
 # Python version to use (3.10 for Humble/Ubuntu 22.04, 3.12 for Jazzy/Ubuntu 24.04)
 ARG PYTHON_VERSION="3.12"
@@ -67,17 +68,18 @@ RUN uv venv /opt/ros_python_env --python ${PYTHON_VERSION}
 # Install requirements in the virtual environment
 COPY requirements.txt /tmp/requirements.txt
 
-# Use CPU or GPU requirements based on build arg
+# Use CPU or GPU requirements based on build arg.
 RUN if [ "$CPU_ONLY" = "true" ]; then \
         /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements.txt \
           --index-url https://download.pytorch.org/whl/cpu \
           --extra-index-url https://pypi.org/simple \
           --index-strategy unsafe-best-match"; \
     else \
-        /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements.txt"; \
-          # --index-url https://download.pytorch.org/whl/cu121 \
-          # --extra-index-url https://pypi.org/simple \
-          # --index-strategy unsafe-best-match"; \
+        # For x86_64 with CUDA support, use the versions from requirements.txt \
+        /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements.txt \
+          --index-url https://download.pytorch.org/whl/cu121 \
+          --extra-index-url https://pypi.org/simple \
+          --index-strategy unsafe-best-match"; \
     fi
 
 
@@ -109,7 +111,7 @@ RUN if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
       echo "rosdep already initialized"; \
     fi
 
-RUN apt-get update && \ 
+RUN apt-get update && \
     /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash;\
       rosdep update; \
       rosdep install -y -r -q --from-paths src --ignore-src --rosdistro ${ROS_DISTRO}; "
@@ -122,7 +124,7 @@ RUN apt-get update && \
 # COPY deps/...
 
 WORKDIR /workspace
-RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash; colcon build --event-handlers console_direct+ --symlink-install --symlink-install;"
+RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash; colcon build --event-handlers console_direct+ --symlink-install;"
 
 # ####################################################################################################
 # [NOT DONE atm] Setting up local user space (create user, set permissions, etc.) during image build

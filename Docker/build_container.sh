@@ -11,25 +11,35 @@ Usage: ./build_container.sh [OPTIONS]
 Build EutRobAI Docker images with configurable ROS2 distributions and hardware support.
 
 OPTIONS:
+    --platform ARCH     Target platform architecture: 'amd' (default) or 'arm'
+                        amd: Standard x86_64 build using Dockerfile
+                        arm: Jetson ARM64 build using Dockerfile.arm
+    
     --humble            Build for ROS2 Humble (Ubuntu 22.04, Python 3.10)
                         Default: ROS2 Jazzy (Ubuntu 24.04, Python 3.12)
+                        Not supported when --platform arm is used
     
     --vulcanexus        Use Vulcanexus base image instead of standard ROS2
                         Default: Vulcanexus Jazzy; with --humble uses Vulcanexus Humble
+                        Not supported when --platform arm is used
     
     --cpu               Build CPU-only version (no GPU support)
                         Default: GPU-enabled build with CUDA support
+                        Not supported when --platform arm is used
     
     --clean-rebuild     Force a clean rebuild without using Docker cache
     
     --help, -h          Display this help message
 
 EXAMPLES:
-    # Standard ROS2 Jazzy with GPU support (default)
+    # Standard ROS2 Jazzy with GPU support (default, x86_64)
     ./build_container.sh
 
-    # ROS2 Humble with GPU support
-    ./build_container.sh --humble
+    # Jetson Thor / ARM64 ROS2 Jazzy build
+    ./build_container.sh --platform arm
+
+    # ROS2 Humble with GPU support on x86_64
+    ./build_container.sh --humble --platform amd
 
     # ROS2 Jazzy CPU-only
     ./build_container.sh --cpu
@@ -44,12 +54,13 @@ EXAMPLES:
     ./build_container.sh --humble --cpu --clean-rebuild
 
 GENERATED IMAGES:
-    Jazzy GPU:           eut_ros_torch:jazzy
-    Jazzy CPU:           eut_ros_torch_cpu:jazzy
-    Humble GPU:          eut_ros_torch:humble
-    Humble CPU:          eut_ros_torch_cpu:humble
-    Vulcanexus Jazzy GPU: eut_ros_vulcanexus_torch:jazzy
-    Vulcanexus Jazzy CPU: eut_ros_vulcanexus_torch_cpu:jazzy
+    Jazzy GPU (amd64):       eut_ros_torch:jazzy
+    Jazzy CPU (amd64):       eut_ros_torch_cpu:jazzy
+    Jazzy GPU (arm64):       eut_ros_torch:jazzy (using Dockerfile.arm + NVIDIA Jetson PyTorch base)
+    Humble GPU (amd64):      eut_ros_torch:humble
+    Humble CPU (amd64):      eut_ros_torch_cpu:humble
+    Vulcanexus Jazzy GPU:    eut_ros_vulcanexus_torch:jazzy
+    Vulcanexus Jazzy CPU:    eut_ros_vulcanexus_torch_cpu:jazzy
     Vulcanexus Humble GPU: eut_ros_vulcanexus_torch:humble
     Vulcanexus Humble CPU: eut_ros_vulcanexus_torch_cpu:humble
 
@@ -59,6 +70,13 @@ ENVIRONMENT:
     - ROS_DOMAIN_ID
     - TARGET_DISTRO, BUILT_IMAGE
     - DOCKER_RUNTIME (nvidia for GPU, runc for CPU)
+
+ARM OVERRIDES:
+    When --platform arm is selected:
+    - Dockerfile.arm is used
+    - ROS 2 Jazzy is forced
+    - The build starts from JETSON_BASE_IMAGE
+    - Default JETSON_BASE_IMAGE: nvcr.io/nvidia/pytorch:25.08-py3-igpu
 
 EOF
     exit 0
@@ -115,41 +133,89 @@ fi
 
 # Initialize flags and variables
 BASE_IMAGE="osrf/ros:jazzy-desktop-full"
+DOCKERFILE="Dockerfile"
 TARGET_DISTRO="jazzy"
 REBUILD=false
 USE_VULCANEXUS=false
 USE_HUMBLE=false
 CPU_ONLY="false"
+PLATFORM_ARCH="amd"
+JETSON_BASE_IMAGE="${JETSON_BASE_IMAGE:-nvcr.io/nvidia/pytorch:25.08-py3-igpu}"
 
 # Parse command line arguments
-for arg in "$@"; do
-    if [ "$arg" == "--clean-rebuild" ]; then
-        REBUILD=true
-    fi
-    if [ "$arg" == "--vulcanexus" ]; then
-        USE_VULCANEXUS=true
-    fi
-    if [ "$arg" == "--humble" ]; then
-        USE_HUMBLE=true
-        TARGET_DISTRO="humble"
-    fi
-    if [ "$arg" == "--cpu" ]; then
-        CPU_ONLY="true"
-    fi
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --clean-rebuild)
+            REBUILD=true
+            ;;
+        --vulcanexus)
+            USE_VULCANEXUS=true
+            ;;
+        --humble)
+            USE_HUMBLE=true
+            TARGET_DISTRO="humble"
+            ;;
+        --cpu)
+            CPU_ONLY="true"
+            ;;
+        --platform)
+            shift
+            if [ -z "$1" ]; then
+                echo "Error: --platform requires a value: amd or arm"
+                exit 1
+            fi
+            PLATFORM_ARCH="$1"
+            ;;
+        --platform=*)
+            PLATFORM_ARCH="${1#*=}"
+            ;;
+        *)
+            echo "Error: Unknown option '$1'"
+            echo "Use --help to see available options."
+            exit 1
+            ;;
+    esac
+    shift
 done
 
-# Resolve base image from selected flags
-if $USE_VULCANEXUS; then
-    if $USE_HUMBLE; then
-        BASE_IMAGE="eprosima/vulcanexus:humble-desktop"
-    else
-        BASE_IMAGE="eprosima/vulcanexus:jazzy-desktop"
+if [ "$PLATFORM_ARCH" != "amd" ] && [ "$PLATFORM_ARCH" != "arm" ]; then
+    echo "Error: Invalid platform '$PLATFORM_ARCH'. Expected 'amd' or 'arm'."
+    exit 1
+fi
+
+if [ "$PLATFORM_ARCH" = "arm" ]; then
+    DOCKERFILE="Dockerfile.arm"
+    BASE_IMAGE="$JETSON_BASE_IMAGE"
+    TARGET_DISTRO="jazzy"
+
+    if $USE_VULCANEXUS; then
+        echo "Error: --vulcanexus is not supported with --platform arm. Dockerfile.arm installs standard ROS 2 Jazzy on top of a Jetson-compatible NVIDIA PyTorch base."
+        exit 1
     fi
-else
+
+    if [ "$CPU_ONLY" = "true" ]; then
+        echo "Error: --cpu is not supported with --platform arm. Dockerfile.arm requires the Jetson GPU-enabled base image."
+        exit 1
+    fi
+
     if $USE_HUMBLE; then
-        BASE_IMAGE="osrf/ros:humble-desktop-full"
+        echo "Warning: --humble is ignored for --platform arm. Forcing ROS 2 Jazzy in Dockerfile.arm."
+    fi
+
+    USE_HUMBLE=false
+else
+    if $USE_VULCANEXUS; then
+        if $USE_HUMBLE; then
+            BASE_IMAGE="eprosima/vulcanexus:humble-desktop"
+        else
+            BASE_IMAGE="eprosima/vulcanexus:jazzy-desktop"
+        fi
     else
-        BASE_IMAGE="osrf/ros:jazzy-desktop-full"
+        if $USE_HUMBLE; then
+            BASE_IMAGE="osrf/ros:humble-desktop-full"
+        else
+            BASE_IMAGE="osrf/ros:jazzy-desktop-full"
+        fi
     fi
 fi
 
@@ -162,6 +228,13 @@ if [ "${TARGET_DISTRO}" == "humble" ]; then
     PYTHON_VERSION="3.10"
 else
     PYTHON_VERSION="3.12"
+fi
+
+# Set Docker platform based on architecture
+if [ "$PLATFORM_ARCH" = "arm" ]; then
+    DOCKER_PLATFORM="linux/arm64"
+else
+    DOCKER_PLATFORM="linux/amd64"
 fi
 
 # Set image name based on the base image choice and CPU flag
@@ -184,15 +257,17 @@ else
 fi
 
 echo "Base image: ${BASE_IMAGE}"
+echo "Dockerfile: ${DOCKERFILE}"
+echo "Platform: ${PLATFORM_ARCH} (${DOCKER_PLATFORM})"
 echo "CPU Only: ${CPU_ONLY}"
 echo "Output image: ${IMAGE_NAME}"
 echo "Python version: ${PYTHON_VERSION}"
 
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
-    docker build --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" -t ${IMAGE_NAME} -f Dockerfile
+    docker build --platform ${DOCKER_PLATFORM} --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" -t ${IMAGE_NAME} -f ${DOCKERFILE}
 else
-    docker build . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" -t ${IMAGE_NAME} -f Dockerfile
+    docker build --platform ${DOCKER_PLATFORM} . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" -t ${IMAGE_NAME} -f ${DOCKERFILE}
 fi
 
 # Set or Update TARGET_DISTRO 
@@ -220,6 +295,19 @@ if grep -q -E "^DOCKER_RUNTIME=" "$ENV_FILE"; then
     sed -i "s/^DOCKER_RUNTIME=.*/DOCKER_RUNTIME=$DOCKER_RUNTIME/" "$ENV_FILE"
 else
     echo "DOCKER_RUNTIME=$DOCKER_RUNTIME" >> "$ENV_FILE"
+fi
+
+# Set or Update ROS_WS based on platform
+if [ "$PLATFORM_ARCH" = "arm" ]; then
+    ROS_WS="/ros2_ws"
+else
+    ROS_WS="/workspace"
+fi
+
+if grep -q -E "^ROS_WS=" "$ENV_FILE"; then
+    sed -i "s|^ROS_WS=.*|ROS_WS=$ROS_WS|" "$ENV_FILE"
+else
+    echo "ROS_WS=$ROS_WS" >> "$ENV_FILE"
 fi
 
 echo "Docker image $IMAGE_NAME built successfully!"

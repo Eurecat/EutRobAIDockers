@@ -14,11 +14,11 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ~/.xauth_docker/share/:/tmp/xauth/
-      - ./.vscode:/workspace/.vscode
-      - ../simple_cpp:/workspace/src/simple_cpp
-      - ../simple_py:/workspace/src/simple_py
+      - ./.vscode:${ROS_WS:-/workspace}/.vscode
+      - ../simple_cpp:${ROS_WS:-/workspace}/src/simple_cpp
+      - ../simple_py:${ROS_WS:-/workspace}/src/simple_py
       - ./dev-entrypoint.sh:/entrypoint.sh:rw # Override entrypoint
-      - ./quick_test_coverage.sh:/workspace/quick_test_coverage.sh
+      - ./quick_test_coverage.sh:${ROS_WS:-/workspace}/quick_test_coverage.sh
 
     tty: true
     stdin_open: true
@@ -33,6 +33,7 @@ services:
       - XAUTHORITY=/tmp/xauth/.docker.xauth    
       - AI_VENV=/opt/ros_python_env   
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}  
+      - ROS_WS=${ROS_WS:-/workspace}  
       # - PULSE_SERVER=unix:/run/user/${USER_ID}/pulse/native
       # - PULSE_COOKIE=/home/coghri/.config/pulse/cookie
       # - ALSA_CARD=${ALSA_CARD}  # Set to the card number for your speaker
@@ -44,5 +45,5 @@ services:
     #   - NET_ADMIN
     # security_opt:
     #   - seccomp:unconfined
-    command: bash -c "source /workspace/install/setup.bash && /bin/bash"
+    command: bash -c "[ -f ${ROS_WS:-/workspace}/install/setup.bash ] && source ${ROS_WS:-/workspace}/install/setup.bash; /bin/bash"
     # entrypoint: ["/entrypoint.sh"]

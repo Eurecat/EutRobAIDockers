@@ -30,6 +30,8 @@
 
 This repository provides a **configurable Docker base image** for robotics and AI development, offering minimal and reproducible Docker setup with **PyTorch** support and choice between different ROS 2 distributions.
 
+For Jetson Thor and other ARM64 Jetson targets, the build now uses a dedicated ARM Dockerfile that starts from an NVIDIA PyTorch base image and installs ROS 2 Jazzy on top. This avoids the generic upstream CUDA wheel flow on Jetson.
+
 The purpose is to serve as a **flexible base container** for robotics and AI projects, ensuring consistency and portability across environments while allowing teams to choose between standard ROS 2 or Vulcanexus distributions.
 
 ---
@@ -90,6 +92,12 @@ This produces the image: **eut_ros_jazzy_torch:latest**
 ```
 This produces the image: **eut_ros_vulcanexus_torch:jazzy**
 
+#### For Jetson Thor / ARM64:
+```bash
+./build_container.sh --platform arm
+```
+This produces the image: **eut_ros_torch:jazzy** using `Docker/Dockerfile.arm` and a Jetson-compatible NVIDIA PyTorch base image.
+
 ### 3. Optional: Force a clean rebuild
 
 Add the `--clean-rebuild` flag to any build command:
@@ -101,12 +109,20 @@ Add the `--clean-rebuild` flag to any build command:
 
 ## 🔧 Build Configuration
 
-The single `Dockerfile` uses build arguments to configure the base image:
+The x86_64 build uses `Docker/Dockerfile` with build arguments to configure the base image:
 
 - **Default**: `osrf/ros:jazzy-desktop-full` (Standard ROS 2 Jazzy)
 - **With `--vulcanexus`**: `eprosima/vulcanexus:jazzy-desktop` (Vulcanexus Jazzy)
 
-The build script automatically selects the appropriate image name based on the chosen base.
+The ARM64 Jetson build uses `Docker/Dockerfile.arm` and forces a Jetson-compatible NVIDIA PyTorch base image, then installs standard ROS 2 Jazzy on top.
+
+By default, the ARM path uses `nvcr.io/nvidia/pytorch:25.08-py3-igpu`. You can override that tag at build time with:
+
+```bash
+JETSON_BASE_IMAGE=<your-compatible-nvidia-image> ./build_container.sh --platform arm
+```
+
+The build script automatically selects the appropriate Dockerfile and image name based on the chosen platform.
 
 ## Launch
 

@@ -14,8 +14,8 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ~/.xauth_docker/share/:/tmp/xauth/
-      - ./.vscode:/workspace/.vscode
-      - ../simple_py:/workspace/src/simple_py
+      - ./.vscode:${ROS_WS:-/workspace}/.vscode
+      - ../simple_py:${ROS_WS:-/workspace}/src/simple_py
 
     tty: true
     stdin_open: true
@@ -25,11 +25,12 @@ services:
       # - GROUP_ID=${GROUP_ID}
       # - USERNAME=${USERNAME}
       - NVIDIA_VISIBLE_DEVICES=all 
-      - DISPLAY=$DISPLAY
+      - DISPLAY=${DISPLAY:-:0}
       - QT_X11_NO_MITSHM=1
       - XAUTHORITY=/tmp/xauth/.docker.xauth   
       - AI_VENV=/opt/ros_python_env  
-      - ROS_DISTRO=${ROS_DISTRO}
+      - ROS_DISTRO=${ROS_DISTRO:-jazzy}
+      - ROS_WS=${ROS_WS:-/workspace}
       # - ROS_DOMAIN_ID=${ROS_DOMAIN_ID}  
       # - PULSE_SERVER=unix:/run/user/${USER_ID}/pulse/native
       # - PULSE_COOKIE=/home/coghri/.config/pulse/cookie
@@ -42,5 +43,5 @@ services:
     #   - NET_ADMIN
     # security_opt:
     #   - seccomp:unconfined
-    command: bash -c "source /workspace/install/setup.bash && /bin/bash"
+    command: bash -c "[ -f ${ROS_WS:-/workspace}/install/setup.bash ] && source ${ROS_WS:-/workspace}/install/setup.bash; /bin/bash"
     # entrypoint: ["/entrypoint.sh"]

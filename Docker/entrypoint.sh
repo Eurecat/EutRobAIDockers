@@ -14,15 +14,18 @@ if [ -f "/opt/vulcanexus/${ROS_DISTRO}/setup.bash" ]; then
     echo "Sourced ${ROS_DISTRO}"
 fi
 
+# Use configurable workspace root (ARM image uses /ros2_ws, x86 keeps /workspace)
+ROS_WS="${ROS_WS:-/workspace}"
+
 # Build person detection and skeleton detection packages
-echo "Building ros2 packages of this repo..."
-cd /workspace
-colcon build --symlink-install --event-handlers console_direct+ 
+echo "Building ros2 packages in ${ROS_WS}..."
+cd "${ROS_WS}"
+colcon build --symlink-install --event-handlers console_direct+
     
 # Source the updated workspace after building
-if [ -f "/workspace/install/setup.bash" ]; then
+if [ -f "${ROS_WS}/install/setup.bash" ]; then
     echo "Sourcing updated workspace environment..."
-    source /workspace/install/setup.bash
+    source "${ROS_WS}/install/setup.bash"
 fi
 
 source /opt/ros_python_env/bin/activate
