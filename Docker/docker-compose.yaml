@@ -16,6 +16,7 @@ services:
       - ~/.xauth_docker/share/:/tmp/xauth/
       - ./.vscode:${ROS_WS:-/workspace}/.vscode
       - ../simple_py:${ROS_WS:-/workspace}/src/simple_py
+      - ../arm_tests:${ROS_WS:-/workspace}/src/arm_tests
 
     tty: true
     stdin_open: true

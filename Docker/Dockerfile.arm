@@ -4,7 +4,7 @@
 # It starts from an NVIDIA PyTorch image so CUDA and torch come from a
 # Jetson-compatible base, then layers ROS 2 Jazzy on top.
 
-ARG BASE_IMAGE="nvcr.io/nvidia/pytorch:25.08-py3-igpu"
+ARG BASE_IMAGE="nvcr.io/nvidia/pytorch:25.08-py3"
 FROM ${BASE_IMAGE} AS base
 
 ARG BASE_IMAGE
@@ -59,6 +59,7 @@ RUN apt-get update && apt-get install -y \
     ros-${ROS_DISTRO}-rmw-fastrtps-cpp \
     && rm -rf /var/lib/apt/lists/*
 
+ENV LD_LIBRARY_PATH=/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib:${LD_LIBRARY_PATH}
 RUN python3 -m venv /opt/ros_python_env --system-site-packages \
     && /bin/bash -c "source /opt/ros_python_env/bin/activate && python -c 'import torch; print(torch.__version__); assert torch.version.cuda is not None'"
 

@@ -140,7 +140,7 @@ USE_VULCANEXUS=false
 USE_HUMBLE=false
 CPU_ONLY="false"
 PLATFORM_ARCH="amd"
-JETSON_BASE_IMAGE="${JETSON_BASE_IMAGE:-nvcr.io/nvidia/pytorch:25.08-py3-igpu}"
+JETSON_BASE_IMAGE="${JETSON_BASE_IMAGE:-nvcr.io/nvidia/pytorch:25.08-py3}"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do

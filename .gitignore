@@ -214,3 +214,7 @@ Docker/deps/
 # Docker logs - ignore all except README
 Docker/logs/*
 !Docker/logs/README.md
+arm_tests/runs
+arm_tests/weights
+*.wav
+*.jpeg
