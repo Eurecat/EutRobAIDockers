@@ -98,6 +98,8 @@ This produces the image: **eut_ros_vulcanexus_torch:jazzy**
 ```
 This produces the image: **eut_ros_torch:jazzy** using `Docker/Dockerfile.arm` and a Jetson-compatible NVIDIA PyTorch base image.
 
+> ⚠️ **The ARM build is designed and validated specifically for NVIDIA Jetson Thor (T5000) running JetPack 7 on Ubuntu 24.04.** It is _not_ a generic ARM64 / multi-platform build. See the [Jetson Thor / ARM target environment](#-jetson-thor--arm-target-environment) section for the exact host requirements.
+
 ### 3. Optional: Force a clean rebuild
 
 Add the `--clean-rebuild` flag to any build command:
@@ -123,6 +125,42 @@ JETSON_BASE_IMAGE=<your-compatible-nvidia-image> ./build_container.sh --platform
 ```
 
 The build script automatically selects the appropriate Dockerfile and image name based on the chosen platform.
+
+## 🤖 Jetson Thor / ARM target environment
+
+The `--platform arm` build path is **purpose-built for NVIDIA Jetson Thor** (Thor T5000 dev kits and equivalents) and is tightly coupled to the current Thor JetPack stack. It is **not** intended as a generic multi-arch ARM64 build, and the ROS 2 distro on ARM is fixed to **Jazzy** (no `--humble`, no `--vulcanexus`, no `--cpu` on ARM).
+
+Reference host configuration this image is built and tested against:
+
+| Component                | Value                                                  |
+| ------------------------ | ------------------------------------------------------ |
+| Board                    | NVIDIA Jetson Thor (T5000, `aarch64`)                  |
+| L4T / BSP                | **R38.4.0** (`nvidia-l4t-core 38.4.0-20251230160601`)  |
+| JetPack                  | **JetPack 7** (Thor GA, L4T R38.x family)              |
+| Host OS                  | **Ubuntu 24.04 LTS (noble)**, kernel `6.8.12-tegra`    |
+| NVIDIA driver / CUDA     | Driver `580.00` / CUDA `13.0` (reported by `nvidia-smi`) |
+| Container PyTorch base   | `nvcr.io/nvidia/pytorch:25.08-py3` (noble, Python 3.12) |
+| ROS 2 distro in image    | **Jazzy Desktop** (Ubuntu 24.04 codename `noble`)      |
+| ROS Python venv          | `/opt/ros_python_env` (Python 3.12, system-site-packages, exposes torch + CUDA from the base) |
+
+Why the constraints:
+
+- The Thor JetPack 7 / L4T R38 stack only ships GPU-enabled CUDA / cuDNN / TensorRT user-space libraries against **Ubuntu 24.04 (noble)**. The `Dockerfile.arm` therefore _must_ be layered on a noble-based NVIDIA PyTorch image; mixing in a `jammy` (22.04) base would lose Thor GPU access.
+- ROS 2 Jazzy is the distro that natively ships for Ubuntu 24.04 / noble. ROS 2 **Humble is Ubuntu 22.04 (jammy) only** and would require a jammy base image, which currently has no Thor-compatible NVIDIA PyTorch container with matching CUDA libraries — so `--platform arm --humble` is intentionally rejected by `build_container.sh`.
+- For the same reason, `--vulcanexus` and `--cpu` are also rejected on ARM: the Vulcanexus images are not Jetson-tuned, and CPU-only would defeat the purpose of building on Thor.
+
+Assumed host setup before building:
+- JetPack 7 flashed and `nvidia-l4t-*` packages installed on the host.
+- Docker installed with the **`nvidia` runtime** registered (`docker info | grep -i runtime` should list `nvidia`); this repo's `docker-compose.yaml` selects it via `DOCKER_RUNTIME=nvidia` in `.env`.
+- Network access to `nvcr.io` to pull `nvcr.io/nvidia/pytorch:25.08-py3` on the first build.
+
+Validation that the image actually has GPU access from inside the container:
+
+```bash
+docker run --rm --runtime nvidia eut_ros_torch:jazzy \
+  bash -lc 'source /opt/ros_python_env/bin/activate && \
+            python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"'
+```
 
 ## Launch
 
