@@ -27,6 +27,7 @@ ARG PYTHON_VERSION="3.12"
 # ARG GROUP_ID=1001
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_WS=/workspace
 
 # ####################################################################################################
 # # Install Python dependencies including PyTorch
@@ -90,10 +91,10 @@ RUN if [ "$CPU_ONLY" = "true" ]; then \
 # ####################################################################################################
 # # Prepare workspace: clone private repositories that do not need to be COPIED from deps nor remapped as volumes
 # ####################################################################################################
-RUN mkdir -p /workspace/src
+RUN mkdir -p ${ROS_WS}/src
 
 # Set working directory
-WORKDIR /workspace/src
+WORKDIR ${ROS_WS}/src
 
 #Clone repos
 # RUN --mount=type=ssh git clone ....
@@ -102,7 +103,7 @@ WORKDIR /workspace/src
 # # Prepare local ros2 workspace (build deps and compile as root)
 # ####################################################################################################
 
-WORKDIR /workspace
+WORKDIR ${ROS_WS}
 
 # Optional: fix rosdep init issue gracefully
 RUN if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
@@ -123,7 +124,7 @@ RUN apt-get update && \
 # Copy all src deps
 # COPY deps/...
 
-WORKDIR /workspace
+WORKDIR ${ROS_WS}
 RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash; colcon build --event-handlers console_direct+ --symlink-install;"
 
 # ####################################################################################################
