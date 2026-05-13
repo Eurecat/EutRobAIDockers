@@ -23,7 +23,8 @@ services:
     tty: true
     stdin_open: true
     environment:
-      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-2}    
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-2}
+      - FASTDDS_BUILTIN_TRANSPORTS=${FASTDDS_BUILTIN_TRANSPORTS:-}
       - USER_ID=${USER_ID}
       - GROUP_ID=${GROUP_ID}
       - USERNAME=${USERNAME}
