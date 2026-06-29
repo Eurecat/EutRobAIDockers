@@ -32,6 +32,7 @@ ENV ROS_WS=/workspace
 # ####################################################################################################
 # # Install Python dependencies including PyTorch
 # ####################################################################################################
+RUN sed -i '/repo.vulcanexus.org/d' /etc/apt/sources.list /etc/apt/sources.list.d/* || true
 
 # Install pip, uv and Python development packages
 RUN apt-get update && apt-get install -y \
