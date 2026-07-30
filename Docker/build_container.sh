@@ -56,7 +56,7 @@ EXAMPLES:
 GENERATED IMAGES:
     Jazzy GPU (amd64):       eut_ros_torch:jazzy
     Jazzy CPU (amd64):       eut_ros_torch_cpu:jazzy
-    Jazzy GPU (arm64):       eut_ros_torch:jazzy (using Dockerfile.arm + NVIDIA Jetson PyTorch base)
+    Jazzy GPU (arm64):       eut_ros_torch_arm:jazzy (using Dockerfile.arm + NVIDIA Jetson PyTorch base)
     Humble GPU (amd64):      eut_ros_torch:humble
     Humble CPU (amd64):      eut_ros_torch_cpu:humble
     Vulcanexus Jazzy GPU:    eut_ros_vulcanexus_torch:jazzy
@@ -250,6 +250,9 @@ else
     if [ "$CPU_ONLY" = "true" ]; then
         IMAGE_NAME="eut_ros_torch_cpu:${TARGET_DISTRO}"
         echo "Building with standard ROS2 ${TARGET_DISTRO} CPU-only base image..."
+    elif [ "$PLATFORM_ARCH" = "arm" ]; then
+        IMAGE_NAME="eut_ros_torch_arm:${TARGET_DISTRO}"
+        echo "Building with standard ROS2 ${TARGET_DISTRO} ARM base image..."
     else
         IMAGE_NAME="eut_ros_torch:${TARGET_DISTRO}"
         echo "Building with standard ROS2 ${TARGET_DISTRO} base image..."
