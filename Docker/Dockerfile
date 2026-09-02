@@ -69,10 +69,11 @@ RUN uv venv /opt/ros_python_env --python ${PYTHON_VERSION}
 
 # Install requirements in the virtual environment
 COPY requirements.txt /tmp/requirements.txt
+COPY requirements_cpu.txt /tmp/requirements_cpu.txt
 
 # Use CPU or GPU requirements based on build arg.
 RUN if [ "$CPU_ONLY" = "true" ]; then \
-        /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements.txt \
+        /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements_cpu.txt \
           --index-url https://download.pytorch.org/whl/cpu \
           --extra-index-url https://pypi.org/simple \
           --index-strategy unsafe-best-match"; \
