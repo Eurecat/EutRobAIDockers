@@ -12,7 +12,7 @@
 
 ## What This Repository Does
 
-**EutRobAIDockers** provides the foundational Docker base images for the entire EutPerceptionStack. It serves as the common container base for all perception modules, ensuring consistent development and deployment environments across the stack. All other repositories (EutHRIFaces, EutEntityDetection, EutHRIHumanBody, EutPersonManager, eut_speech_audio_processing) build their containers on top of these base images.
+**EutRobAIDockers** provides the foundational Docker base images for the entire EutPerceptionStack. It serves as the common container base for all perception modules, ensuring consistent development and deployment environments across the stack. All other repositories (EutHRIFaces, EutEntityDetection, EutHRIHumanBody, EutPersonManager, EutSpeechAudioProcessing) build their containers on top of these base images.
 
 <p align="center">
   <img src="Docker/imgs/perceptionstack_diagram.jpeg" alt="Base Docker Architecture" width="800"/>
@@ -60,7 +60,7 @@ This base image serves as the foundation for the complete perception stack:
 - **[EutEntityDetection](https://github.com/Eurecat/EutEntityDetection)**: YOLO-based object and person detection with tracking
 - **[EutHRIHumanBody](https://github.com/Eurecat/EutHRIHumanBody)**: Person detection filtering and skeleton keypoint estimation
 - **[EutPersonManager](https://github.com/Eurecat/EutPersonManager)**: Multi-modal person fusion (body, face, skeleton, gaze)
-- **[eut_speech_audio_processing](https://github.com/Eurecat/eut_speech_audio_processing)**: Audio stream management, VAD, diarization, and ASR
+- **[EutSpeechAudioProcessing](https://github.com/Eurecat/EutSpeechAudioProcessing)** *(private)*: Audio stream management, VAD, diarization, and ASR
 
 All these repositories reference EutRobAIDockers as their base image and extend it with domain-specific dependencies and models.
 
