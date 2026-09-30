@@ -36,6 +36,12 @@ The purpose is to serve as a **flexible base container** for robotics and AI pro
 
 ---
 
+## Repository layout
+
+`Docker/` (Dockerfiles for x86 and Jetson Thor, build script, compose, test scripts), `simple_py/`
+and `simple_cpp/` (template packages for the test toolchain), `plans/` (development notes),
+`CLAUDE.md` (guide for coding agents; `AGENTS.md` links to it).
+
 ## 📦 Configurable Base Image Options
 
 ### **Standard ROS 2 Jazzy + PyTorch** (Default)
