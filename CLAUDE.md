@@ -35,3 +35,8 @@ both `rmw_cyclonedds_cpp` and `rmw_fastrtps_cpp`, workspace `/workspace`.
   `--humble`, `--vulcanexus` and `--cpu` on purpose.
 - A change here rebuilds every downstream image; component Dockerfiles take it as `BASE_IMAGE`.
 - Check GPU access in the ARM image with the torch one-liner in the README ("Jetson Thor").
+
+## Commits
+
+Plain human sentences describing the change, no prefixes. No AI attribution: no
+`Co-Authored-By` trailer, no "Generated with" line.
