@@ -284,15 +284,17 @@ echo "Platform: ${PLATFORM_ARCH} (${DOCKER_PLATFORM})"
 echo "CPU Only: ${CPU_ONLY}"
 echo "Output image: ${IMAGE_NAME}"
 echo "Python version: ${PYTHON_VERSION}"
+JETSON_BUILD_ARG=""
 if [ "$PLATFORM_ARCH" = "arm" ]; then
     echo "Jetson target: ${JETSON_TARGET}"
+    JETSON_BUILD_ARG="--build-arg JETSON_TARGET=${JETSON_TARGET}"
 fi
 
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
-    docker build --network=host --platform ${DOCKER_PLATFORM} --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" --build-arg JETSON_TARGET="${JETSON_TARGET}" -t ${IMAGE_NAME} -f ${DOCKERFILE}
+    docker build --network=host --platform ${DOCKER_PLATFORM} --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" ${JETSON_BUILD_ARG} -t ${IMAGE_NAME} -f ${DOCKERFILE}
 else
-    docker build --network=host --platform ${DOCKER_PLATFORM} . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" --build-arg JETSON_TARGET="${JETSON_TARGET}" -t ${IMAGE_NAME} -f ${DOCKERFILE}
+    docker build --network=host --platform ${DOCKER_PLATFORM} . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" ${JETSON_BUILD_ARG} -t ${IMAGE_NAME} -f ${DOCKERFILE}
 fi
 
 # Set or Update TARGET_DISTRO 
