@@ -1,8 +1,13 @@
-# EutRobAI Base Image: Jetson Thor / ARM64 ROS 2 Jazzy + PyTorch
+# EutRobAI Base Image: Jetson Thor / Orin ARM64 ROS 2 Jazzy + PyTorch
 #
 # This Dockerfile is dedicated to Jetson ARM builds.
 # It starts from an NVIDIA PyTorch image so CUDA and torch come from a
 # Jetson-compatible base, then layers ROS 2 Jazzy on top.
+#
+# JETSON_TARGET picks the board (build_container.sh detects it from the host):
+#   thor: nvcr.io/nvidia/pytorch:25.08-py3 (JetPack 7, CUDA 13, torch 2.8)
+#   orin: dustynv/pytorch:2.7-r36.4.0-cu128-24.04 (JetPack 6, CUDA 12.8, torch 2.7)
+# It stays in the image as ENV JETSON_TARGET so component Dockerfiles can branch on it.
 
 ARG BASE_IMAGE="nvcr.io/nvidia/pytorch:25.08-py3"
 FROM ${BASE_IMAGE} AS base
@@ -10,6 +15,16 @@ FROM ${BASE_IMAGE} AS base
 ARG BASE_IMAGE
 ARG PYTHON_VERSION="3.12"
 ARG PLATFORM_ARCH="arm"
+ARG JETSON_TARGET="thor"
+
+ENV JETSON_TARGET=${JETSON_TARGET}
+LABEL eut.jetson_target=${JETSON_TARGET}
+
+# The dustynv (Orin) base points pip at pypi.jetson-ai-lab.dev, which is gone, and sets
+# PIP_VERBOSE=1, which appends install paths to `pip list --format=freeze` output.
+# Use PyPI; Jetson wheels are installed from explicit pypi.jetson-ai-lab.io URLs.
+ENV PIP_INDEX_URL=https://pypi.org/simple \
+    PIP_VERBOSE=0
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=jazzy
@@ -60,8 +75,32 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LD_LIBRARY_PATH=/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib:${LD_LIBRARY_PATH}
-RUN python3 -m venv /opt/ros_python_env --system-site-packages \
+
+# nvidia-pyindex (in the dustynv base) writes pypi.ngc.nvidia.com as an extra index into
+# several pip.conf files. That host no longer resolves, so every package lookup in the
+# component builds would retry it five times. Drop it wherever it was written.
+RUN for f in /etc/pip.conf /etc/xdg/pip/pip.conf /opt/venv/pip.conf /root/.pip/pip.conf /root/.config/pip/pip.conf; do \
+        [ -f "$f" ] && sed -i '/extra-index-url/d; /trusted-host/d; /ngc\.nvidia\.com/d' "$f"; \
+    done; true
+# The dustynv (Orin) base already ships torch in the /opt/venv virtualenv (first
+# on PATH, with system site-packages), so /opt/ros_python_env points at it.
+# NumPy is pinned to 1.26.4 there, matching the Thor base: cv_bridge and the
+# other ROS python bindings are built against NumPy 1.x.
+RUN if [ -d /opt/venv ]; then \
+        ln -s /opt/venv /opt/ros_python_env \
+        && /opt/venv/bin/pip install --no-cache-dir "numpy==1.26.4"; \
+    else \
+        python3 -m venv /opt/ros_python_env --system-site-packages; \
+    fi \
     && /bin/bash -c "source /opt/ros_python_env/bin/activate && python -m pip install --no-cache-dir uv && python -c 'import torch; print(torch.__version__); assert torch.version.cuda is not None'"
+
+# Orin: pin the Jetson CUDA builds of torch / torchvision / torchaudio and NumPy 1.x so
+# component requirements cannot swap them for PyPI wheels. Component Dockerfile.arm files
+# pass it to pip with -c when it exists.
+RUN if [ "${JETSON_TARGET}" = "orin" ]; then \
+        pip list --format=freeze | grep -iE '^(torch|torchvision|torchaudio|numpy)==' > /opt/jetson_constraints.txt \
+        && cat /opt/jetson_constraints.txt; \
+    fi
 
 RUN mkdir -p /ros2_ws/src
 

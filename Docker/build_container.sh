@@ -35,8 +35,11 @@ EXAMPLES:
     # Standard ROS2 Jazzy with GPU support (default, x86_64)
     ./build_container.sh
 
-    # Jetson Thor / ARM64 ROS2 Jazzy build
+    # Jetson ARM64 ROS2 Jazzy build (Thor or Orin, detected from the host)
     ./build_container.sh --platform arm
+
+    # Orin image built on another machine
+    JETSON_TARGET=orin ./build_container.sh --platform arm
 
     # ROS2 Humble with GPU support on x86_64
     ./build_container.sh --humble --platform amd
@@ -56,7 +59,8 @@ EXAMPLES:
 GENERATED IMAGES:
     Jazzy GPU (amd64):       eut_ros_torch:jazzy
     Jazzy CPU (amd64):       eut_ros_torch_cpu:jazzy
-    Jazzy GPU (arm64):       eut_ros_torch_arm:jazzy (using Dockerfile.arm + NVIDIA Jetson PyTorch base)
+    Jazzy GPU (arm64):       eut_ros_torch_arm:jazzy (Jetson Thor, Dockerfile.arm + NVIDIA PyTorch base)
+                             eut_ros_torch_arm_orin:jazzy (Jetson Orin, Dockerfile.arm + dustynv PyTorch base)
     Humble GPU (amd64):      eut_ros_torch:humble
     Humble CPU (amd64):      eut_ros_torch_cpu:humble
     Vulcanexus Jazzy GPU:    eut_ros_vulcanexus_torch:jazzy
@@ -75,8 +79,12 @@ ARM OVERRIDES:
     When --platform arm is selected:
     - Dockerfile.arm is used
     - ROS 2 Jazzy is forced
+    - The Jetson board comes from /etc/nv_tegra_release: L4T R36 (JetPack 6) is Orin,
+      anything else (R38+ / JetPack 7, or not a Jetson) is Thor.
+      Override with JETSON_TARGET=orin|thor.
     - The build starts from JETSON_BASE_IMAGE
-    - Default JETSON_BASE_IMAGE: nvcr.io/nvidia/pytorch:25.08-py3-igpu
+    - Default JETSON_BASE_IMAGE: nvcr.io/nvidia/pytorch:25.08-py3 (Thor),
+      dustynv/pytorch:2.7-r36.4.0-cu128-24.04 (Orin)
 
 EOF
     exit 0
@@ -140,7 +148,18 @@ USE_VULCANEXUS=false
 USE_HUMBLE=false
 CPU_ONLY="false"
 PLATFORM_ARCH="amd"
-JETSON_BASE_IMAGE="${JETSON_BASE_IMAGE:-nvcr.io/nvidia/pytorch:25.08-py3}"
+
+# Jetson board for --platform arm: L4T R36 (JetPack 6) is Orin, anything else is Thor.
+if [ -z "${JETSON_TARGET:-}" ]; then
+    L4T_MAJOR=$(sed -n 's/^# R\([0-9]\+\) .*/\1/p' /etc/nv_tegra_release 2>/dev/null)
+    if [ "${L4T_MAJOR:-0}" = "36" ]; then JETSON_TARGET="orin"; else JETSON_TARGET="thor"; fi
+fi
+case "$JETSON_TARGET" in
+    thor) ARM_SUFFIX="_arm";      DEFAULT_JETSON_BASE_IMAGE="nvcr.io/nvidia/pytorch:25.08-py3" ;;
+    orin) ARM_SUFFIX="_arm_orin"; DEFAULT_JETSON_BASE_IMAGE="dustynv/pytorch:2.7-r36.4.0-cu128-24.04" ;;
+    *) echo "Error: JETSON_TARGET must be 'thor' or 'orin' (got '$JETSON_TARGET')."; exit 1 ;;
+esac
+JETSON_BASE_IMAGE="${JETSON_BASE_IMAGE:-$DEFAULT_JETSON_BASE_IMAGE}"
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
@@ -251,8 +270,8 @@ else
         IMAGE_NAME="eut_ros_torch_cpu:${TARGET_DISTRO}"
         echo "Building with standard ROS2 ${TARGET_DISTRO} CPU-only base image..."
     elif [ "$PLATFORM_ARCH" = "arm" ]; then
-        IMAGE_NAME="eut_ros_torch_arm:${TARGET_DISTRO}"
-        echo "Building with standard ROS2 ${TARGET_DISTRO} ARM base image..."
+        IMAGE_NAME="eut_ros_torch${ARM_SUFFIX}:${TARGET_DISTRO}"
+        echo "Building with standard ROS2 ${TARGET_DISTRO} ARM base image for Jetson ${JETSON_TARGET}..."
     else
         IMAGE_NAME="eut_ros_torch:${TARGET_DISTRO}"
         echo "Building with standard ROS2 ${TARGET_DISTRO} base image..."
@@ -265,12 +284,15 @@ echo "Platform: ${PLATFORM_ARCH} (${DOCKER_PLATFORM})"
 echo "CPU Only: ${CPU_ONLY}"
 echo "Output image: ${IMAGE_NAME}"
 echo "Python version: ${PYTHON_VERSION}"
+if [ "$PLATFORM_ARCH" = "arm" ]; then
+    echo "Jetson target: ${JETSON_TARGET}"
+fi
 
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
-    docker build --network=host --platform ${DOCKER_PLATFORM} --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" -t ${IMAGE_NAME} -f ${DOCKERFILE}
+    docker build --network=host --platform ${DOCKER_PLATFORM} --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" --build-arg JETSON_TARGET="${JETSON_TARGET}" -t ${IMAGE_NAME} -f ${DOCKERFILE}
 else
-    docker build --network=host --platform ${DOCKER_PLATFORM} . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" -t ${IMAGE_NAME} -f ${DOCKERFILE}
+    docker build --network=host --platform ${DOCKER_PLATFORM} . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" --build-arg JETSON_TARGET="${JETSON_TARGET}" -t ${IMAGE_NAME} -f ${DOCKERFILE}
 fi
 
 # Set or Update TARGET_DISTRO 

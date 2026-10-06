@@ -98,13 +98,16 @@ This produces the image: **eut_ros_jazzy_torch:latest**
 ```
 This produces the image: **eut_ros_vulcanexus_torch:jazzy**
 
-#### For Jetson Thor / ARM64:
+#### For Jetson Thor or Orin / ARM64:
 ```bash
 ./build_container.sh --platform arm
 ```
-This produces the image: **eut_ros_torch:jazzy** using `Docker/Dockerfile.arm` and a Jetson-compatible NVIDIA PyTorch base image.
+This produces **eut_ros_torch_arm:jazzy** on a Jetson Thor and **eut_ros_torch_arm_orin:jazzy** on a
+Jetson Orin, using `Docker/Dockerfile.arm` and a Jetson-compatible PyTorch base image. The board is
+read from `/etc/nv_tegra_release` (L4T R36 = Orin, anything else = Thor); set `JETSON_TARGET=orin` or
+`JETSON_TARGET=thor` to build for the other board.
 
-> ⚠️ **The ARM build is designed and validated specifically for NVIDIA Jetson Thor (T5000) running JetPack 7 on Ubuntu 24.04.** It is _not_ a generic ARM64 / multi-platform build. See the [Jetson Thor / ARM target environment](#-jetson-thor--arm-target-environment) section for the exact host requirements.
+> ⚠️ **The ARM build is designed and validated for NVIDIA Jetson Thor (JetPack 7) and Jetson AGX Orin (JetPack 6), both with Ubuntu 24.04 inside the container.** It is _not_ a generic ARM64 / multi-platform build. See the [Jetson Thor / ARM target environment](#-jetson-thor--arm-target-environment) section for the exact host requirements.
 
 ### 3. Optional: Force a clean rebuild
 
@@ -124,7 +127,8 @@ The x86_64 build uses `Docker/Dockerfile` with build arguments to configure the 
 
 The ARM64 Jetson build uses `Docker/Dockerfile.arm` and forces a Jetson-compatible NVIDIA PyTorch base image, then installs standard ROS 2 Jazzy on top.
 
-By default, the ARM path uses `nvcr.io/nvidia/pytorch:25.08-py3-igpu`. You can override that tag at build time with:
+By default, the ARM path uses `nvcr.io/nvidia/pytorch:25.08-py3` on Thor and
+`dustynv/pytorch:2.7-r36.4.0-cu128-24.04` on Orin. You can override that tag at build time with:
 
 ```bash
 JETSON_BASE_IMAGE=<your-compatible-nvidia-image> ./build_container.sh --platform arm
@@ -160,10 +164,31 @@ Assumed host setup before building:
 - Docker installed with the **`nvidia` runtime** registered (`docker info | grep -i runtime` should list `nvidia`); this repo's `docker-compose.yaml` selects it via `DOCKER_RUNTIME=nvidia` in `.env`.
 - Network access to `nvcr.io` to pull `nvcr.io/nvidia/pytorch:25.08-py3` on the first build.
 
+### Jetson Orin (JetPack 6)
+
+Same `--platform arm` command; the image is `eut_ros_torch_arm_orin:jazzy` and every component image
+built on it carries the same `_arm_orin` suffix, so Orin and Thor images never share a Docker Hub tag.
+
+| Component                | Value                                                  |
+| ------------------------ | ------------------------------------------------------ |
+| Board                    | NVIDIA Jetson AGX Orin 64GB (`aarch64`, SM 8.7)         |
+| L4T / BSP                | **R36.5** (JetPack 6.2), host Ubuntu 22.04, kernel `5.15-tegra` |
+| Container base           | `dustynv/pytorch:2.7-r36.4.0-cu128-24.04` (noble, Python 3.12, CUDA 12.8, cuDNN 9.8, TensorRT 10.7, torch 2.7.0, torchaudio 2.7.0, torchvision 0.22.0) |
+| ROS Python venv          | `/opt/ros_python_env` → the base's `/opt/venv` (it already holds torch, with system site-packages) |
+
+Orin-only details of `Dockerfile.arm`, all keyed on `ENV JETSON_TARGET=orin` (also a `eut.jetson_target`
+image label) so component Dockerfiles can branch on it:
+
+- NumPy is pinned to 1.26.4, as in the Thor base (cv_bridge is built against NumPy 1.x).
+- `/opt/jetson_constraints.txt` pins torch / torchvision / torchaudio / numpy; component Dockerfiles pass
+  it to pip with `-c` so no requirement can replace the CUDA builds with PyPI wheels.
+- pip uses PyPI: the base's `pypi.jetson-ai-lab.dev` index and `pypi.ngc.nvidia.com` extra index are dead.
+  Jetson GPU wheels (onnxruntime-gpu) come from explicit `pypi.jetson-ai-lab.io/jp6/cu129` URLs.
+
 Validation that the image actually has GPU access from inside the container:
 
 ```bash
-docker run --rm --runtime nvidia eut_ros_torch:jazzy \
+docker run --rm --runtime nvidia eut_ros_torch_arm:jazzy \
   bash -lc 'source /opt/ros_python_env/bin/activate && \
             python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"'
 ```
