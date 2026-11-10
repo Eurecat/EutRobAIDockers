@@ -18,6 +18,10 @@ OPTIONS:
     --humble            Build for ROS2 Humble (Ubuntu 22.04, Python 3.10)
                         Default: ROS2 Jazzy (Ubuntu 24.04, Python 3.12)
                         Not supported when --platform arm is used
+
+    --lyrical           Build for ROS2 Lyrical (Ubuntu 26.04, Python 3.14), with
+                        PyTorch for CUDA 12.8 and rmw_zenoh_cpp
+                        Not supported with --platform arm, --humble or --vulcanexus
     
     --vulcanexus        Use Vulcanexus base image instead of standard ROS2
                         Default: Vulcanexus Jazzy; with --humble uses Vulcanexus Humble
@@ -146,6 +150,7 @@ TARGET_DISTRO="jazzy"
 REBUILD=false
 USE_VULCANEXUS=false
 USE_HUMBLE=false
+USE_LYRICAL=false
 CPU_ONLY="false"
 PLATFORM_ARCH="amd"
 
@@ -174,6 +179,10 @@ while [ "$#" -gt 0 ]; do
             USE_HUMBLE=true
             TARGET_DISTRO="humble"
             ;;
+        --lyrical)
+            USE_LYRICAL=true
+            TARGET_DISTRO="lyrical"
+            ;;
         --cpu)
             CPU_ONLY="true"
             ;;
@@ -200,6 +209,13 @@ done
 if [ "$PLATFORM_ARCH" != "amd" ] && [ "$PLATFORM_ARCH" != "arm" ]; then
     echo "Error: Invalid platform '$PLATFORM_ARCH'. Expected 'amd' or 'arm'."
     exit 1
+fi
+
+if $USE_LYRICAL; then
+    if [ "$PLATFORM_ARCH" = "arm" ] || $USE_HUMBLE || $USE_VULCANEXUS; then
+        echo "Error: --lyrical cannot be combined with --platform arm, --humble or --vulcanexus."
+        exit 1
+    fi
 fi
 
 if [ "$PLATFORM_ARCH" = "arm" ]; then
@@ -232,6 +248,8 @@ else
     else
         if $USE_HUMBLE; then
             BASE_IMAGE="osrf/ros:humble-desktop-full"
+        elif $USE_LYRICAL; then
+            BASE_IMAGE="osrf/ros:lyrical-desktop-full"
         else
             BASE_IMAGE="osrf/ros:jazzy-desktop-full"
         fi
@@ -245,6 +263,8 @@ fi
 # Set Python version based on ROS distribution
 if [ "${TARGET_DISTRO}" == "humble" ]; then
     PYTHON_VERSION="3.10"
+elif [ "${TARGET_DISTRO}" == "lyrical" ]; then
+    PYTHON_VERSION="3.14"
 else
     PYTHON_VERSION="3.12"
 fi
@@ -278,6 +298,13 @@ else
     fi
 fi
 
+# PyTorch wheel index: Lyrical's Python 3.14 needs a newer CUDA build than cu121
+if [ "${TARGET_DISTRO}" == "lyrical" ]; then
+    TORCH_INDEX="cu128"
+else
+    TORCH_INDEX="cu121"
+fi
+
 echo "Base image: ${BASE_IMAGE}"
 echo "Dockerfile: ${DOCKERFILE}"
 echo "Platform: ${PLATFORM_ARCH} (${DOCKER_PLATFORM})"
@@ -292,9 +319,9 @@ fi
 
 if $REBUILD; then
     echo "Rebuilding the Docker image..."
-    docker build --network=host --platform ${DOCKER_PLATFORM} --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" ${JETSON_BUILD_ARG} -t ${IMAGE_NAME} -f ${DOCKERFILE}
+    docker build --network=host --platform ${DOCKER_PLATFORM} --no-cache . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg TORCH_INDEX="${TORCH_INDEX}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" ${JETSON_BUILD_ARG} -t ${IMAGE_NAME} -f ${DOCKERFILE}
 else
-    docker build --network=host --platform ${DOCKER_PLATFORM} . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" ${JETSON_BUILD_ARG} -t ${IMAGE_NAME} -f ${DOCKERFILE}
+    docker build --network=host --platform ${DOCKER_PLATFORM} . --build-arg BASE_IMAGE="${BASE_IMAGE}" --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg TORCH_INDEX="${TORCH_INDEX}" --build-arg CPU_ONLY="${CPU_ONLY}" --build-arg PLATFORM_ARCH="${PLATFORM_ARCH}" ${JETSON_BUILD_ARG} -t ${IMAGE_NAME} -f ${DOCKERFILE}
 fi
 
 # Set or Update TARGET_DISTRO 
