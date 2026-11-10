@@ -5,7 +5,7 @@
 # - PyTorch for deep learning capabilities (GPU or CPU)
 # - Development tools and utilities for robotics AI projects
 
-# Choose the base image at build time. Defaults to Jazzy.
+# Choose the base image at build time. Defaults to Jazzy; Lyrical is osrf/ros:lyrical-desktop-full.
 ARG BASE_IMAGE="osrf/ros:jazzy-desktop-full"
 ARG CPU_ONLY="false"
 ARG PLATFORM_ARCH="amd"
@@ -17,8 +17,11 @@ ARG BASE_IMAGE
 ARG CPU_ONLY
 ARG PLATFORM_ARCH
 
-# Python version to use (3.10 for Humble/Ubuntu 22.04, 3.12 for Jazzy/Ubuntu 24.04)
+# Python version to use (3.10 for Humble/Ubuntu 22.04, 3.12 for Jazzy/Ubuntu 24.04,
+# 3.14 for Lyrical/Ubuntu 26.04)
 ARG PYTHON_VERSION="3.12"
+# PyTorch wheel index for GPU builds (cu128 for Lyrical: there are no Python 3.14 wheels for cu121)
+ARG TORCH_INDEX="cu121"
 
 # Set default user/group variables
 # ARG USER_NAME=coghri
@@ -47,6 +50,7 @@ RUN apt-get update && apt-get install -y \
     python3-vcstool \
     ros-${ROS_DISTRO}-rmw-fastrtps-cpp \
     ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+    ros-${ROS_DISTRO}-rmw-zenoh-cpp \
     git \
     wget \
     terminator \
@@ -56,6 +60,7 @@ RUN apt-get update && apt-get install -y \
 
 # Upgrade pip to ensure --break-system-packages flag is supported (only needed for Humble)
 ARG PYTHON_VERSION
+ARG TORCH_INDEX
 RUN if [ "${PYTHON_VERSION}" = "3.10" ]; then \
         pip3 install --upgrade pip; \
     fi
@@ -65,7 +70,13 @@ RUN pip3 install --break-system-packages uv
 
 # # Install PyTorch and torchvision using uv with system packages override
 # Create a virtual environment for Python packages
-RUN uv venv /opt/ros_python_env --python ${PYTHON_VERSION}
+# On Lyrical the generated message modules import empy at runtime (rosidl_pycommon), so the venv
+# also sees the system's Python packages there; its own packages still take precedence.
+RUN if [ "${PYTHON_VERSION}" = "3.14" ]; then \
+        uv venv /opt/ros_python_env --python /usr/bin/python3 --system-site-packages; \
+    else \
+        uv venv /opt/ros_python_env --python ${PYTHON_VERSION}; \
+    fi
 
 # Install requirements in the virtual environment
 COPY requirements.txt /tmp/requirements.txt
@@ -80,7 +91,7 @@ RUN if [ "$CPU_ONLY" = "true" ]; then \
     else \
         # For x86_64 with CUDA support, use the versions from requirements.txt \
         /bin/bash -c "source /opt/ros_python_env/bin/activate && uv pip install --no-cache -r /tmp/requirements.txt \
-          --index-url https://download.pytorch.org/whl/cu121 \
+          --index-url https://download.pytorch.org/whl/${TORCH_INDEX} \
           --extra-index-url https://pypi.org/simple \
           --index-strategy unsafe-best-match"; \
     fi
